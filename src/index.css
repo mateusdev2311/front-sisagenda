@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-800 m-0 p-0 antialiased;
+  }
+}
+
+/* Base Form Overrides */
+input,
+select,
+textarea {
+  @apply border border-slate-300 rounded-md px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow;
+}
+
+label {
+  @apply block text-sm font-medium text-slate-700 mb-1;
+}
+
+/* Modals */
+.modal-overlay {
+  @apply fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300;
+}
+
+.modal-overlay.active {
+  @apply opacity-100 pointer-events-auto;
+}
+
+.modal-content {
+  @apply bg-white rounded-2xl shadow-2xl shadow-slate-900/10 w-full max-w-4xl mx-4 transform scale-95 transition-transform duration-300 max-h-[90vh] flex flex-col overflow-hidden;
+}
+
+.modal-overlay.active .modal-content {
+  @apply scale-100;
+}
+
+.modal-lg {
+  @apply max-w-4xl;
+}
+
+.modal-sm {
+  @apply max-w-md;
+}
+
+.modal-header {
+  @apply px-6 py-4 border-b border-slate-100 flex justify-between items-center;
+}
+
+.modal-header h2 {
+  @apply text-lg font-semibold text-slate-800 m-0;
+}
+
+.close-btn {
+  @apply text-slate-400 hover:text-slate-600 cursor-pointer text-2xl font-light leading-none;
+}
+
+.modal-body {
+  @apply p-6 overflow-y-auto overflow-x-hidden;
+}
+
+.modal-footer {
+  @apply px-6 py-4 border-t border-slate-100 flex justify-end gap-3 rounded-b-xl bg-slate-50;
+}
+
+/* Buttons */
+.btn-primary {
+  @apply bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-sm shadow-primary/30;
+}
+
+.btn-secondary {
+  @apply bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-lg font-medium transition-colors;
+}
+
+.btn-icon {
+  @apply p-2 rounded-md text-slate-500 hover:bg-slate-100 transition-colors flex items-center justify-center;
+}

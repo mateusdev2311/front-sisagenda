@@ -1,0 +1,159 @@
+import { useState, useRef, useEffect } from 'react';
+import { FaSearch, FaBell, FaChevronDown, FaKey, FaSignOutAlt, FaInfoCircle, FaCalendarCheck, FaExclamationTriangle, FaBars } from 'react-icons/fa';
+
+const Topbar = () => {
+    const [langOpen, setLangOpen] = useState(false);
+    const [notifOpen, setNotifOpen] = useState(false);
+    const [profileOpen, setProfileOpen] = useState(false);
+
+    // Close dropdowns on outside click (naive implementation for demo)
+    const langRef = useRef(null);
+    const notifRef = useRef(null);
+    const profileRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (langRef.current && !langRef.current.contains(event.target)) setLangOpen(false);
+            if (notifRef.current && !notifRef.current.contains(event.target)) setNotifOpen(false);
+            if (profileRef.current && !profileRef.current.contains(event.target)) setProfileOpen(false);
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const handleLogout = () => {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+    };
+
+    return (
+        <header className="h-20 bg-white border-b border-slate-200 px-6 flex items-center justify-between shadow-sm shadow-slate-200/20 z-10 sticky top-0">
+
+            {/* Mobile Toggle & Search */}
+            <div className="flex items-center gap-4 flex-1">
+                <button className="md:hidden text-slate-500 hover:text-primary p-2">
+                    <FaBars className="text-xl" />
+                </button>
+
+                <div className="relative hidden sm:block max-w-md w-full">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <FaSearch className="text-slate-400" />
+                    </div>
+                    <input
+                        type="text"
+                        className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-full leading-5 bg-slate-50 text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all sm:text-sm"
+                        placeholder="Pesquisar pacientes, médicos, prontuários..."
+                    />
+                </div>
+            </div>
+
+            {/* Actions Right */}
+            <div className="flex items-center gap-4">
+
+                {/* Language Selector */}
+                <div className="relative" ref={langRef}>
+                    <button
+                        onClick={() => setLangOpen(!langOpen)}
+                        className="flex items-center gap-1 text-slate-600 hover:bg-slate-50 px-3 py-1.5 rounded-lg border border-transparent hover:border-slate-200 transition-colors text-sm font-medium"
+                    >
+                        <span>ENG</span>
+                        <FaChevronDown className={`text-xs text-slate-400 transition-transform ${langOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {langOpen && (
+                        <div className="absolute right-0 mt-2 w-40 bg-white rounded-xl shadow-lg border border-slate-100 py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                            <button className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-primary transition-colors" onClick={() => setLangOpen(false)}>PT Português (BR)</button>
+                            <button className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-primary transition-colors" onClick={() => setLangOpen(false)}>EN Inglês</button>
+                            <button className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-primary transition-colors" onClick={() => setLangOpen(false)}>ES Espanhol</button>
+                        </div>
+                    )}
+                </div>
+
+                {/* Notifications */}
+                <div className="relative" ref={notifRef}>
+                    <button
+                        onClick={() => setNotifOpen(!notifOpen)}
+                        className="relative p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors"
+                    >
+                        <FaBell className="text-lg" />
+                        <span className="absolute top-1 right-1 block h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white"></span>
+                    </button>
+
+                    {notifOpen && (
+                        <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-slate-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                                <span className="text-sm font-semibold text-slate-800">Notificações</span>
+                                <span className="text-xs text-primary bg-primary-light px-2 py-0.5 rounded-full font-medium">3 Novas</span>
+                            </div>
+                            <div className="max-h-64 overflow-y-auto">
+                                <a href="#" className="block px-4 py-3 hover:bg-slate-50 transition-colors border-b border-slate-50">
+                                    <div className="flex gap-3">
+                                        <div className="mt-0.5 text-primary"><FaInfoCircle /></div>
+                                        <div>
+                                            <p className="text-sm text-slate-800 font-medium">Atualização do Sistema v2.0</p>
+                                            <p className="text-xs text-slate-500 mt-0.5">A nova dashboard em React está ativa.</p>
+                                            <p className="text-xs text-slate-400 mt-1">há 10 minutos</p>
+                                        </div>
+                                    </div>
+                                </a>
+                                <a href="#" className="block px-4 py-3 hover:bg-slate-50 transition-colors border-b border-slate-50">
+                                    <div className="flex gap-3">
+                                        <div className="mt-0.5 text-success"><FaCalendarCheck /></div>
+                                        <div>
+                                            <p className="text-sm text-slate-800 font-medium">Novo Agendamento</p>
+                                            <p className="text-xs text-slate-500 mt-0.5">Dr. Silva tem um novo paciente para atender.</p>
+                                            <p className="text-xs text-slate-400 mt-1">há 1 hora</p>
+                                        </div>
+                                    </div>
+                                </a>
+                                <a href="#" className="block px-4 py-3 hover:bg-slate-50 transition-colors">
+                                    <div className="flex gap-3">
+                                        <div className="mt-0.5 text-warning"><FaExclamationTriangle /></div>
+                                        <div>
+                                            <p className="text-sm text-slate-800 font-medium">Licença Expirando</p>
+                                            <p className="text-xs text-slate-500 mt-0.5">A validação das licenças CRM é necessária.</p>
+                                            <p className="text-xs text-slate-400 mt-1">há 2 dias</p>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                            <div className="px-4 py-2 border-t border-slate-100 text-center bg-slate-50">
+                                <a href="#" className="text-xs font-semibold text-primary hover:text-primary-dark">Ver todas as notificações</a>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* User Profile */}
+                <div className="relative pl-2 border-l border-slate-200" ref={profileRef}>
+                    <button
+                        onClick={() => setProfileOpen(!profileOpen)}
+                        className="flex items-center gap-2 hover:bg-slate-50 p-1.5 rounded-lg transition-colors border border-transparent hover:border-slate-200"
+                    >
+                        <img className="h-8 w-8 rounded-full border border-slate-200 object-cover" src="https://ui-avatars.com/api/?name=Admin+User&background=6c5be4&color=fff" alt="User" />
+                        <div className="hidden md:flex flex-col items-start mr-1">
+                            <span className="text-sm font-semibold text-slate-700 leading-tight">Admin User</span>
+                            <span className="text-xs text-slate-500">Superadmin</span>
+                        </div>
+                        <FaChevronDown className={`text-xs text-slate-400 hidden md:block transition-transform ${profileOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {profileOpen && (
+                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-100 py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="px-4 py-2 border-b border-slate-100 mb-1">
+                                <p className="text-sm text-slate-800 font-medium">Logado como</p>
+                                <p className="text-xs text-slate-500 truncate">admin@sisagenda.com</p>
+                            </div>
+                            <button className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"><FaKey className="text-slate-400" /> Mudar Senha</button>
+                            <div className="h-px bg-slate-100 my-1"></div>
+                            <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium"><FaSignOutAlt /> Sair do Sistema</button>
+                        </div>
+                    )}
+                </div>
+
+            </div>
+        </header>
+    );
+};
+
+export default Topbar;

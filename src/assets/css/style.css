@@ -1,0 +1,229 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg, #6c5be4 0%, #a44dee 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.container {
+    padding: 0;
+    width: 100%;
+    max-width: 900px;
+}
+
+.login-card {
+    background-color: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+    min-height: 550px;
+    position: relative;
+}
+
+/* Left Panel */
+.left-panel {
+    width: 50%;
+    background: linear-gradient(to bottom, #49e4ff, #3fa1fe);
+    color: #fff;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.left-content {
+    padding: 3rem;
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.logo {
+    font-weight: 700;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4rem;
+}
+
+.welcome-section h1 {
+    font-size: 2.8rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    letter-spacing: -0.5px;
+}
+
+.welcome-section p {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    opacity: 0.9;
+}
+
+.footer-text {
+    margin-top: auto;
+    font-size: 0.85rem;
+    opacity: 0.9;
+}
+
+.waves {
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 100%;
+    height: 60%;
+    z-index: 1;
+    overflow: hidden;
+}
+
+.waves svg {
+    position: absolute;
+    bottom: 0;
+    width: 200%;
+    height: 100%;
+    transform: translateX(-15%);
+}
+
+/* Right Panel */
+.right-panel {
+    width: 50%;
+    padding: 4rem 3rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.right-content h2 {
+    color: #409bf5;
+    font-size: 2.2rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.subtitle {
+    color: #9ca3af;
+    font-size: 0.85rem;
+    margin-bottom: 2.5rem;
+    line-height: 1.4;
+    max-width: 90%;
+}
+
+.input-group {
+    margin-bottom: 1.5rem;
+}
+
+.input-group label {
+    display: block;
+    color: #9ca3af;
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 0.85rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+    color: #374151;
+}
+
+.input-group input:focus {
+    border-color: #409bf5;
+}
+
+.options {
+    margin-bottom: 2rem;
+    margin-top: -0.5rem;
+}
+
+.checkbox-container {
+    display: inline-flex;
+    align-items: center;
+    color: #9ca3af;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.checkbox-container input {
+    margin-right: 0.5rem;
+    width: 16px;
+    height: 16px;
+    accent-color: #409bf5;
+    cursor: pointer;
+}
+
+.login-btn {
+    width: 100%;
+    padding: 0.9rem;
+    background-color: #409bf5;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-bottom: 2rem;
+}
+
+.login-btn:hover {
+    background-color: #3187db;
+}
+
+.links {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    align-items: center;
+}
+
+.signup-link {
+    color: #9ca3af;
+}
+
+.signup-link a {
+    color: #409bf5;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.forgot-link {
+    color: #9ca3af;
+    text-decoration: none;
+}
+
+.forgot-link:hover, .signup-link a:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+    .login-card {
+        flex-direction: column;
+    }
+    
+    .left-panel, .right-panel {
+        width: 100%;
+    }
+    
+    .left-panel {
+        padding-bottom: 6rem;
+    }
+    
+    .right-panel {
+        padding: 3rem 2rem;
+    }
+}
