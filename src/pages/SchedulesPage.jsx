@@ -4,9 +4,30 @@ import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
 import Select from 'react-select';
 import { FaPlus, FaChevronLeft, FaChevronRight, FaCalendarCheck } from 'react-icons/fa';
+import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
+import format from 'date-fns/format';
+import parse from 'date-fns/parse';
+import startOfWeek from 'date-fns/startOfWeek';
+import getDay from 'date-fns/getDay';
+import ptBR from 'date-fns/locale/pt-BR';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
+import '../assets/css/calendar-overrides.css'; // Optional: Custom styling for BigCalendar
+
+const locales = {
+    'pt-BR': ptBR,
+};
+
+const localizer = dateFnsLocalizer({
+    format,
+    parse,
+    startOfWeek,
+    getDay,
+    locales,
+});
 
 const SchedulesPage = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
+    const [view, setView] = useState('month');
     const [appointments, setAppointments] = useState([]);
     const [doctors, setDoctors] = useState([]);
     const [patients, setPatients] = useState([]);
@@ -42,11 +63,35 @@ const SchedulesPage = () => {
     };
 
     const handlePrevMonth = () => {
+        // Now handled natively by BigCalendar's Toolbar, but kept if we need external control.
         setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
     };
 
     const handleNextMonth = () => {
         setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+    };
+
+    /**
+     * Helper para Mapear Agendamentos em "Eventos" da Biblioteca
+     */
+    const getCalendarEvents = () => {
+        return appointments.map(app => {
+            const doc = doctors.find(d => d.id === app.doctor_id);
+            const pat = patients.find(p => p.id === (app.patient_id || app.user_id)) || { name: 'Paciente' };
+
+            const startDate = new Date(app.date);
+            // Defaulting appointment duration to 1 hora (since we don't have end_time yet in API)
+            const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+
+            return {
+                id: app.id,
+                title: `${pat.name.split(' ')[0]} c/ Dr. ${doc?.name.split(' ')[0] || ''}`,
+                start: startDate,
+                end: endDate,
+                resource: app, // Cópia completa para usar no OnClick/Editar
+                bgColor: doc?.color || '#6c5be4'
+            };
+        });
     };
 
     const handleOpenCreate = () => {
@@ -151,109 +196,80 @@ const SchedulesPage = () => {
     };
 
     /**
-     * Algoritmos Matemáticos do Calendário
-     * Calcula o espaço vazio antes do primeiro dia do mês para alinhar a grade Tailwind.
+     * Mapeamento de Cores Nativas do Médico no BigCalendar
      */
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-
-    // getDay() retorna 0 pra Domingo, 1 pra Seg., etc. Representa as caixas em branco antes do dia 1.
-    const firstDay = new Date(year, month, 1).getDay();
-
-    // O dia 0 do PRÓXIMO mês nos dá o último dia (total de dias) do mês ATUAL.
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-    // Arrays usados pro mapa de renderização da grade CSS Tailwind
-    const emptyCells = Array.from({ length: firstDay });
-    const dayCells = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+    const eventPropGetter = (event) => {
+        return {
+            style: {
+                backgroundColor: event.bgColor,
+                border: `1px solid ${event.bgColor}`,
+                borderRadius: '6px',
+                opacity: 0.9,
+                color: 'white',
+                borderLeft: '4px solid rgba(0,0,0,0.2)',
+                display: 'block',
+                fontWeight: '600',
+                fontSize: '12px'
+            }
+        };
+    };
 
     return (
-        <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 fade-in h-4/5 flex flex-col">
+        <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 fade-in h-full flex flex-col">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
                 <div>
                     <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Calendário Médico</h2>
-                    <p className="text-sm text-slate-500 mt-1">Gerencie a disponibilidade médica e marque consultas.</p>
+                    <p className="text-sm text-slate-500 mt-1">Gerencie a disponibilidade médica e marque consultas com arrastar e soltar (Drag-and-Drop).</p>
                 </div>
 
                 <div className="flex items-center gap-4 bg-white px-2 py-1.5 rounded-xl border border-slate-200 shadow-sm">
-                    <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors" onClick={handlePrevMonth}><FaChevronLeft className="text-sm" /></button>
-                    <h3 className="w-32 text-center font-bold text-slate-800">{monthNames[month]} {year}</h3>
-                    <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors" onClick={handleNextMonth}><FaChevronRight className="text-sm" /></button>
-
-                    <div className="w-px h-6 bg-slate-200 mx-2"></div>
-
                     <button className="btn-primary py-1.5" onClick={handleOpenCreate}>
-                        <FaPlus className="text-sm" /> Consulta
+                        <FaPlus className="text-sm" /> Nova Consulta
                     </button>
                 </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm shadow-slate-200/50 border border-slate-100 flex-1 flex flex-col overflow-hidden min-h-[600px]">
-                {/* Days Header */}
-                <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50">
-                    {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(d => (
-                        <div key={d} className="px-2 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">
-                            {d}
-                        </div>
-                    ))}
-                </div>
-
-                {/* Calendar Grid */}
-                <div className="flex-1 grid grid-cols-7 grid-rows-5 bg-slate-200 gap-px pb-px pr-px pl-px border-b border-slate-200">
-                    {emptyCells.map((_, i) => (
-                        <div key={`empty-${i}`} className="bg-slate-50/50 min-h-[120px]"></div>
-                    ))}
-
-                    {dayCells.map(day => {
-                        const dayApps = appointments.filter(app => {
-                            if (!app.date) return false;
-                            const d = new Date(app.date);
-                            if (isNaN(d)) return false;
-                            return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day;
-                        });
-
-                        const isToday = day === new Date().getDate() && month === new Date().getMonth() && year === new Date().getFullYear();
-
-                        return (
-                            <div key={day} className={`bg-white min-h-[120px] p-2 flex flex-col group transition-colors hover:bg-slate-50/50 overflow-hidden relative ${isToday ? 'bg-primary/5' : ''}`}>
-                                <span className={`inline-flex items-center justify-center w-7 h-7 text-sm font-semibold mb-2 rounded-full ${isToday ? 'bg-primary text-white shadow-md' : 'text-slate-500 group-hover:text-primary group-hover:bg-primary/10 transition-colors'}`}>
-                                    {day}
-                                </span>
-
-                                <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1 pr-1">
-                                    {dayApps.map(app => {
-                                        const doc = doctors.find(d => d.id === app.doctor_id);
-                                        const patId = app.patient_id || app.user_id;
-                                        const pat = patients.find(p => p.id === patId) || { name: `Pat ${patId}` };
-                                        const docName = doc ? `Dr. ${doc.name.split(' ')[0]}` : `Doc ${app.doctor_id}`;
-
-                                        const t = new Date(app.date);
-                                        const timeStr = isNaN(t) ? '' : `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`;
-
-                                        // Slightly darken the hex code for border mapping using opacity overlay approach
-                                        return (
-                                            <div
-                                                key={app.id}
-                                                className="text-[11px] leading-tight px-2 py-1.5 rounded border-l-4 border-b border-t border-r cursor-pointer hover:opacity-90 transition-opacity truncate font-medium shadow-sm relative overflow-hidden group/item"
-                                                style={{
-                                                    borderLeftColor: doc?.color || '#6c5be4',
-                                                    borderTopColor: 'transparent', borderRightColor: 'transparent', borderBottomColor: 'transparent',
-                                                    backgroundColor: `${doc?.color}15` || '#f1f5f9', // 15% opacity hex native workaround or solid light
-                                                    color: '#334155'
-                                                }}
-                                                onClick={() => handleOpenEdit(app)}
-                                                title="Clique para editar ou cancelar a consulta"
-                                            >
-                                                <span className="font-bold opacity-80" style={{ color: doc?.color }}>{timeStr}</span> {docName} <span className="opacity-70">({pat.name.split(' ')[0]})</span>
-                                            </div>
-                                        );
-                                    })}
+            <div className="bg-white rounded-2xl shadow-sm shadow-slate-200/50 border border-slate-100 flex-1 flex flex-col p-4 lg:p-6 min-h-[650px] overflow-hidden">
+                <Calendar
+                    localizer={localizer}
+                    events={getCalendarEvents()}
+                    date={currentDate}
+                    onNavigate={(newDate) => setCurrentDate(newDate)}
+                    view={view}
+                    onView={(newView) => setView(newView)}
+                    startAccessor="start"
+                    endAccessor="end"
+                    style={{ height: '100%' }}
+                    culture="pt-BR"
+                    messages={{
+                        next: "Próximo",
+                        previous: "Anterior",
+                        today: "Hoje",
+                        month: "Mês",
+                        week: "Semana",
+                        day: "Dia",
+                        agenda: "Lista"
+                    }}
+                    onSelectEvent={(event) => handleOpenEdit(event.resource)}
+                    eventPropGetter={eventPropGetter}
+                    components={{
+                        toolbar: (toolbarProps) => (
+                            <div className="flex justify-between items-center mb-6">
+                                <div className="flex gap-2">
+                                    <button className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors text-sm" onClick={() => toolbarProps.onNavigate('PREV')}><FaChevronLeft /></button>
+                                    <button className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors text-sm" onClick={() => toolbarProps.onNavigate('TODAY')}>Hoje</button>
+                                    <button className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors text-sm" onClick={() => toolbarProps.onNavigate('NEXT')}><FaChevronRight /></button>
+                                </div>
+                                <h3 className="text-xl font-bold text-slate-800 uppercase tracking-widest">{toolbarProps.label}</h3>
+                                <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
+                                    <button className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-colors ${toolbarProps.view === 'month' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`} onClick={() => toolbarProps.onView('month')}>Mês</button>
+                                    <button className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-colors hidden sm:block ${toolbarProps.view === 'week' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`} onClick={() => toolbarProps.onView('week')}>Semana</button>
+                                    <button className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-colors ${toolbarProps.view === 'day' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`} onClick={() => toolbarProps.onView('day')}>Dia</button>
                                 </div>
                             </div>
-                        );
-                    })}
-                </div>
+                        )
+                    }}
+                />
             </div>
 
             <Modal

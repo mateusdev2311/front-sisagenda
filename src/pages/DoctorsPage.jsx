@@ -46,7 +46,8 @@ const DoctorsPage = () => {
             const res = await axios.get('/doctors');
             setDoctors(res.data);
         } catch (error) {
-            alert('Error fetching doctors');
+            console.error('Fetch doctors error:', error);
+            alert('Error fetching doctors: ' + (error.message || 'Unknown error'));
         }
     };
 

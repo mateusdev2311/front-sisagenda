@@ -8,6 +8,8 @@ import DoctorsPage from './pages/DoctorsPage';
 import PatientsPage from './pages/PatientsPage';
 import SchedulesPage from './pages/SchedulesPage';
 import RecordsPage from './pages/RecordsPage';
+import FinancialPage from './pages/FinancialPage';
+import SettingsPage from './pages/SettingsPage';
 import './index.css';
 import './api/axiosConfig';
 
@@ -34,6 +36,8 @@ function App() {
           <Route path="/patients" element={<PatientsPage />} />
           <Route path="/schedules" element={<SchedulesPage />} />
           <Route path="/records" element={<RecordsPage />} />
+          <Route path="/financial" element={<FinancialPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Route>
 
         {/* Fallback */}

@@ -11,9 +11,9 @@ const Sidebar = () => {
     const titleClass = "text-xs font-bold text-slate-400 uppercase tracking-wider mt-6 mb-2 px-4";
 
     return (
-        <aside className="w-72 bg-slate-50 border-r border-slate-200 h-full flex flex-col hidden md:flex transition-all duration-300">
+        <aside className="w-72 bg-slate-50 border-r border-slate-200 h-full flex flex-col hidden md:flex transition-colors duration-300">
 
-            <div className="h-20 flex items-center px-6 border-b border-slate-200">
+            <div className="h-20 flex items-center px-6 border-b border-slate-200 transition-colors">
                 <div className="flex items-center gap-3 text-2xl font-bold text-primary">
                     <FaHeartbeat className="text-3xl" />
                     <span className="tracking-tight">Sisagenda</span>
@@ -58,11 +58,18 @@ const Sidebar = () => {
                         </NavLink>
                     </li>
 
+                    <li className={titleClass}>Financeiro</li>
+                    <li>
+                        <NavLink to="/financial" className={linkClass}>
+                            <FaHeartbeat className="text-lg opacity-80" /> <span>Faturamento</span>
+                        </NavLink>
+                    </li>
+
                     <li className={titleClass}>Configurações</li>
                     <li>
-                        <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-white hover:text-slate-800 hover:shadow-sm transition-all duration-200 mt-1">
+                        <NavLink to="/settings" className={linkClass}>
                             <FaCog className="text-lg opacity-80" /> <span>Preferências</span>
-                        </a>
+                        </NavLink>
                     </li>
                 </ul>
             </nav>

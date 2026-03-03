@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import axios from '../api/axiosConfig';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
-import { FaHeartbeat, FaSearch, FaFilter, FaFileMedicalAlt, FaPrescriptionBottleAlt, FaStethoscope, FaNotesMedical, FaChevronDown, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaHeartbeat, FaSearch, FaFilter, FaFileMedicalAlt, FaPrescriptionBottleAlt, FaStethoscope, FaNotesMedical, FaChevronDown, FaEdit, FaTrash, FaFilePdf } from 'react-icons/fa';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 const RecordsPage = () => {
     /**
@@ -20,6 +22,7 @@ const RecordsPage = () => {
     const [selectedPatientId, setSelectedPatientId] = useState('');
     const [selectedDoctorFilter, setSelectedDoctorFilter] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [attachments, setAttachments] = useState({});
 
     /**
      * Constelação de Dados (Filtro Cruzado)
@@ -130,6 +133,35 @@ const RecordsPage = () => {
         });
     };
 
+    const handleFileUpload = (e, recordId) => {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+
+        const maxSizeBytes = 5 * 1024 * 1024;
+        const validFiles = files.filter(f => f.size <= maxSizeBytes);
+
+        const newAttachments = validFiles.map(file => {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve({
+                    id: Date.now() + Math.random(),
+                    name: file.name,
+                    size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
+                    dataUrl: reader.result
+                });
+            });
+        });
+
+        Promise.all(newAttachments).then(results => {
+            setAttachments(prev => ({
+                ...prev,
+                [recordId]: [...(prev[recordId] || []), ...results]
+            }));
+            alert('Arquivo anexado com sucesso ao prontuário!');
+        });
+    };
+
     /**
      * API: POST /appointments/:appointment_id/records-records
      * Anexa um novo Prontuário Médico ao histórico cronológico, vinculando-o diretamente com Base na Consulta agendada da qual decorreu.
@@ -172,6 +204,38 @@ const RecordsPage = () => {
                 }
             }
         });
+    };
+
+    /**
+     * Módulo Premium: Geração e Exportação de PDF
+     * Utiliza html2canvas para tirar um "print" estruturado da div oculta (Template),
+     * e o jsPDF para converter e baixar o arquivo final.
+     */
+    const handleExportPDF = async (record) => {
+        const input = document.getElementById(`pdf-template-${record.id}`);
+        if (!input) return alert('Template de PDF indisponível');
+
+        try {
+            // Tornamo o contêiner temporariamente visível pro Canvas "tirar a foto"
+            input.style.display = 'block';
+
+            const canvas = await html2canvas(input, { scale: 2 });
+            const imgData = canvas.toDataURL('image/png');
+
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save(`Prontuario_Clinico_${record.id}.pdf`);
+
+            // Ocultamos novamente após o Canvas finalizar.
+            input.style.display = 'none';
+        } catch (error) {
+            console.error("Failed to export PDF", error);
+            alert("Erro ao exportar arquivo PDF do prontuário.");
+            input.style.display = 'none';
+        }
     };
 
     const getFilterDoctors = () => {
@@ -279,7 +343,8 @@ const RecordsPage = () => {
                                                     </div>
                                                     <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold tracking-wide flex items-center gap-2">
                                                         {new Date(r.created_at).toLocaleDateString()}
-                                                        <button className="ml-2 px-2 py-1 bg-white hover:bg-slate-200 text-slate-500 rounded transition-colors" title="Editar" onClick={() => handleOpenEdit(r)}><FaEdit /></button>
+                                                        <button className="ml-2 px-2 py-1 bg-white hover:bg-emerald-50 text-emerald-600 rounded transition-colors" title="Exportar para PDF" onClick={() => handleExportPDF(r)}><FaFilePdf /></button>
+                                                        <button className="px-2 py-1 bg-white hover:bg-slate-200 text-slate-500 rounded transition-colors" title="Editar" onClick={() => handleOpenEdit(r)}><FaEdit /></button>
                                                         <button className="px-2 py-1 bg-white hover:bg-danger/10 text-danger rounded transition-colors" title="Excluir" onClick={() => handleDelete(r.id)}><FaTrash /></button>
                                                     </span>
                                                 </div>
@@ -309,6 +374,75 @@ const RecordsPage = () => {
                                                         </div>
                                                     </div>
                                                 </div>
+
+                                                {/* File Upload / Attachments Area */}
+                                                <div className="mt-6 pt-4 border-t border-slate-100">
+                                                    <div className="flex flex-wrap gap-4 items-center">
+                                                        <label className="cursor-pointer bg-slate-50 hover:bg-primary/5 text-slate-600 hover:text-primary px-4 py-2 rounded-lg border border-slate-200 transition-colors text-sm font-semibold flex items-center gap-2">
+                                                            <input type="file" className="hidden" multiple onChange={(e) => handleFileUpload(e, r.id)} accept=".pdf, image/*" />
+                                                            <FaFileUpload /> Anexar Exame / Documento
+                                                        </label>
+
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {(attachments[r.id] || []).map(file => (
+                                                                <a key={file.id} href={file.dataUrl} download={file.name} className="flex items-center gap-2 bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-slate-200 transition-colors border border-slate-200">
+                                                                    <FaFilePdf className="text-danger" />
+                                                                    <span className="max-w-[120px] truncate" title={file.name}>{file.name}</span>
+                                                                </a>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* =======================================================
+                                                    TEMPLATE DO ATESTADO. ESCONDIDO (Display NONE).
+                                                    APENAS USADO PELO HTML2CANVAS DURANTE O HANDLE_EXPORT_PDF
+                                                ======================================================== */}
+                                                <div id={`pdf-template-${r.id}`} style={{ display: 'none', width: '800px', padding: '40px', backgroundColor: 'white', fontFamily: 'sans-serif', color: '#333' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #6c5be4', paddingBottom: '20px', marginBottom: '20px' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                            <div style={{ color: '#6c5be4', fontSize: '28px', fontWeight: 'bold' }}>Sisagenda</div>
+                                                            <div style={{ fontSize: '14px', color: '#666', borderLeft: '1px solid #ddd', paddingLeft: '10px', marginLeft: '10px' }}>Centro Clínico<br />Avançado</div>
+                                                        </div>
+                                                        <div style={{ textAlign: 'right', fontSize: '12px', color: '#666' }}>
+                                                            Data: {new Date().toLocaleDateString()}<br />
+                                                            Ref. Consulta: #{r.appointment_id}<br />
+                                                            Cod. Documento: #{r.id}
+                                                        </div>
+                                                    </div>
+
+                                                    <div style={{ marginBottom: '30px' }}>
+                                                        <h2 style={{ fontSize: '18px', color: '#111', marginBottom: '8px' }}>Evolução e Prontuário Médico</h2>
+                                                        <p style={{ margin: 0, fontSize: '14px' }}><strong>Paciente:</strong> {patients.find(p => p.id === selectedPatientId)?.name || 'Paciente'}</p>
+                                                        <p style={{ margin: 0, fontSize: '14px' }}><strong>Médico Responsável:</strong> Dr. {doc?.name.replace('Dr. ', '') || 'Não especificado'} ({doc?.specialty || 'Generalista'})</p>
+                                                    </div>
+
+                                                    <div style={{ marginBottom: '20px', backgroundColor: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                                        <h3 style={{ fontSize: '14px', textTransform: 'uppercase', color: '#475569', marginBottom: '10px' }}>Sintomas / Anamnese</h3>
+                                                        <div style={{ fontSize: '14px', lineHeight: '1.5' }}>{r.symptoms || 'Nenhum sintoma detalhado na consulta.'}</div>
+                                                    </div>
+
+                                                    <div style={{ marginBottom: '20px', backgroundColor: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                                        <h3 style={{ fontSize: '14px', textTransform: 'uppercase', color: '#475569', marginBottom: '10px' }}>Diagnóstico Clínico Clínico</h3>
+                                                        <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#1e293b' }}>{r.diagnosis || 'Em investigação / Não Informado'}</div>
+                                                    </div>
+
+                                                    <div style={{ marginBottom: '40px', backgroundColor: '#eff6ff', padding: '20px', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
+                                                        <h3 style={{ fontSize: '14px', textTransform: 'uppercase', color: '#2563eb', marginBottom: '10px' }}>Receituário Médio e Prescrições</h3>
+                                                        <div style={{ fontSize: '14px', fontFamily: 'monospace', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
+                                                            {r.prescription || 'Nenhum medicamento ou tratamento adicional prescrito.'}
+                                                        </div>
+                                                    </div>
+
+                                                    <div style={{ marginTop: '80px', paddingTop: '20px', borderTop: '1px dashed #cbd5e1', textAlign: 'center' }}>
+                                                        <div style={{ width: '250px', borderBottom: '1px solid #000', margin: '0 auto 10px' }}></div>
+                                                        <div style={{ fontSize: '14px', fontWeight: 'bold' }}>Dr. {doc?.name.replace('Dr. ', '') || 'Médico Signatário'}</div>
+                                                        <div style={{ fontSize: '12px', color: '#64748b' }}>{doc?.crm ? `CRM: ${doc.crm}` : 'Assinatura Médica Autorizada'}</div>
+                                                    </div>
+                                                </div>
+                                                {/* =======================================================
+                                                    FIM DO TEMPLATE DO PDF
+                                                ======================================================== */}
 
                                             </div>
                                         </div>

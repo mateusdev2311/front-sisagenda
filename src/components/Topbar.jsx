@@ -1,19 +1,35 @@
 import { useState, useRef, useEffect } from 'react';
 import { FaSearch, FaBell, FaChevronDown, FaKey, FaSignOutAlt, FaInfoCircle, FaCalendarCheck, FaExclamationTriangle, FaBars } from 'react-icons/fa';
+import { jwtDecode } from 'jwt-decode';
+import { useNavigate } from 'react-router-dom';
 
 const Topbar = () => {
-    const [langOpen, setLangOpen] = useState(false);
     const [notifOpen, setNotifOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [userData, setUserData] = useState({ name: 'Usuário', email: '', role: 'Membro' });
+    const navigate = useNavigate();
 
-    // Close dropdowns on outside click (naive implementation for demo)
-    const langRef = useRef(null);
     const notifRef = useRef(null);
     const profileRef = useRef(null);
 
     useEffect(() => {
+        // Obter dados do usuário logado via JWT Token
+        const token = localStorage.getItem('token');
+        if (token) {
+            try {
+                const decoded = jwtDecode(token);
+                setUserData({
+                    name: decoded.name || 'Usuário do Sistema',
+                    email: decoded.email || '',
+                    role: decoded.role === 'admin' ? 'Superadmin' : 'Acesso Padrão'
+                });
+            } catch (error) {
+                console.error("Erro ao decodificar token", error);
+            }
+        }
+
         const handleClickOutside = (event) => {
-            if (langRef.current && !langRef.current.contains(event.target)) setLangOpen(false);
             if (notifRef.current && !notifRef.current.contains(event.target)) setNotifOpen(false);
             if (profileRef.current && !profileRef.current.contains(event.target)) setProfileOpen(false);
         };
@@ -26,8 +42,17 @@ const Topbar = () => {
         window.location.href = '/login';
     };
 
+    const handleSearch = (e) => {
+        if (e.key === 'Enter' && searchQuery.trim() !== '') {
+            // Em aplicação real isso chamaria a rota /search global da API
+            alert(`Pesquisando por: ${searchQuery}`);
+            navigate(`/patients?search=${encodeURIComponent(searchQuery)}`);
+            setSearchQuery('');
+        }
+    };
+
     return (
-        <header className="h-20 bg-white border-b border-slate-200 px-6 flex items-center justify-between shadow-sm shadow-slate-200/20 z-10 sticky top-0">
+        <header className="h-20 bg-white border-b border-slate-200 px-6 flex items-center justify-between shadow-sm z-10 sticky top-0 transition-colors duration-200">
 
             {/* Mobile Toggle & Search */}
             <div className="flex items-center gap-4 flex-1">
@@ -41,33 +66,17 @@ const Topbar = () => {
                     </div>
                     <input
                         type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={handleSearch}
                         className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-full leading-5 bg-slate-50 text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all sm:text-sm"
-                        placeholder="Pesquisar pacientes, médicos, prontuários..."
+                        placeholder="Pesquisar pacientes ou médicos... (Pressione Enter)"
                     />
                 </div>
             </div>
 
             {/* Actions Right */}
             <div className="flex items-center gap-4">
-
-                {/* Language Selector */}
-                <div className="relative" ref={langRef}>
-                    <button
-                        onClick={() => setLangOpen(!langOpen)}
-                        className="flex items-center gap-1 text-slate-600 hover:bg-slate-50 px-3 py-1.5 rounded-lg border border-transparent hover:border-slate-200 transition-colors text-sm font-medium"
-                    >
-                        <span>ENG</span>
-                        <FaChevronDown className={`text-xs text-slate-400 transition-transform ${langOpen ? 'rotate-180' : ''}`} />
-                    </button>
-
-                    {langOpen && (
-                        <div className="absolute right-0 mt-2 w-40 bg-white rounded-xl shadow-lg border border-slate-100 py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                            <button className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-primary transition-colors" onClick={() => setLangOpen(false)}>PT Português (BR)</button>
-                            <button className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-primary transition-colors" onClick={() => setLangOpen(false)}>EN Inglês</button>
-                            <button className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-primary transition-colors" onClick={() => setLangOpen(false)}>ES Espanhol</button>
-                        </div>
-                    )}
-                </div>
 
                 {/* Notifications */}
                 <div className="relative" ref={notifRef}>
@@ -130,10 +139,10 @@ const Topbar = () => {
                         onClick={() => setProfileOpen(!profileOpen)}
                         className="flex items-center gap-2 hover:bg-slate-50 p-1.5 rounded-lg transition-colors border border-transparent hover:border-slate-200"
                     >
-                        <img className="h-8 w-8 rounded-full border border-slate-200 object-cover" src="https://ui-avatars.com/api/?name=Admin+User&background=6c5be4&color=fff" alt="User" />
+                        <img className="h-8 w-8 rounded-full border border-slate-200 object-cover" src={`https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=6c5be4&color=fff`} alt={userData.name} />
                         <div className="hidden md:flex flex-col items-start mr-1">
-                            <span className="text-sm font-semibold text-slate-700 leading-tight">Admin User</span>
-                            <span className="text-xs text-slate-500">Superadmin</span>
+                            <span className="text-sm font-semibold text-slate-700 leading-tight">{userData.name}</span>
+                            <span className="text-xs text-slate-500">{userData.role}</span>
                         </div>
                         <FaChevronDown className={`text-xs text-slate-400 hidden md:block transition-transform ${profileOpen ? 'rotate-180' : ''}`} />
                     </button>
@@ -142,9 +151,9 @@ const Topbar = () => {
                         <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-100 py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                             <div className="px-4 py-2 border-b border-slate-100 mb-1">
                                 <p className="text-sm text-slate-800 font-medium">Logado como</p>
-                                <p className="text-xs text-slate-500 truncate">admin@sisagenda.com</p>
+                                <p className="text-xs text-slate-500 truncate">{userData.email}</p>
                             </div>
-                            <button className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"><FaKey className="text-slate-400" /> Mudar Senha</button>
+                            <button onClick={() => navigate('/settings')} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"><FaKey className="text-slate-400" /> Minha Conta</button>
                             <div className="h-px bg-slate-100 my-1"></div>
                             <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium"><FaSignOutAlt /> Sair do Sistema</button>
                         </div>

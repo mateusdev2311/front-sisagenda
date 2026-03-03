@@ -1,0 +1,20 @@
+.rbc-event {
+    transition: all 0.2s ease-in-out;
+}
+
+.rbc-event:hover {
+    transform: scale(1.02);
+    z-index: 10;
+}
+
+.rbc-toolbar button {
+    font-family: 'Inter', sans-serif;
+}
+
+.rbc-today {
+    background-color: #f8fafc;
+}
+
+.rbc-off-range-bg {
+    background-color: #f1f5f9;
+}
