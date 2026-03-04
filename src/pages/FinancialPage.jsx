@@ -3,6 +3,7 @@ import axios from '../api/axiosConfig';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
 import { FaMoneyBillWave, FaSearch, FaFilter, FaFileInvoiceDollar, FaCheckCircle, FaRegClock, FaTimesCircle, FaChevronDown, FaEdit, FaTrash, FaPlus, FaChartLine } from 'react-icons/fa';
+import Select from 'react-select';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
 import { Doughnut, Bar } from 'react-chartjs-2';
 
@@ -23,7 +24,7 @@ const FinancialPage = () => {
     const [statusFilter, setStatusFilter] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState(null);
-    const [formData, setFormData] = useState({ appointment_id: '', amount: '', status: 'pendente', due_date: '', payment_method: '' });
+    const [formData, setFormData] = useState({ appointmentId: '', patientId: '', value: '', status: 'Pendente', dueDate: '', payment_method: '' });
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', type: 'primary', onConfirm: null });
 
     // Key Performance Indicators (KPIs)
@@ -45,7 +46,7 @@ const FinancialPage = () => {
 
     const fetchData = async () => {
         try {
-            // Buscando Consultas e Pacientes para criar os vínculos e mostrar nomes reais
+            // Buscar pacientes e agendamentos para referência visual
             const [appRes, patRes] = await Promise.all([
                 axios.get('/appointments'),
                 axios.get('/patients')
@@ -53,14 +54,9 @@ const FinancialPage = () => {
             setAppointments(appRes.data);
             setPatients(patRes.data);
 
-            // TODO: Aqui a API oficial (ex: GET /payments) entraria. 
-            // Como estamos criando o front primeiro (Mocking Data), vamos simular os dados:
-            const mockPayments = [
-                { id: 1, appointment_id: appRes.data[0]?.id || 1, amount: 250.00, status: 'pago', due_date: new Date().toISOString().split('T')[0], payment_method: 'Pix' },
-                { id: 2, appointment_id: appRes.data[1]?.id || 2, amount: 400.00, status: 'pendente', due_date: new Date(Date.now() + 86400000).toISOString().split('T')[0], payment_method: 'Cartão de Crédito' },
-                { id: 3, appointment_id: appRes.data[2]?.id || 3, amount: 150.00, status: 'cancelado', due_date: new Date(Date.now() - 86400000).toISOString().split('T')[0], payment_method: 'Dinheiro' },
-            ];
-            setPayments(mockPayments);
+            // Buscar dados reais da API de faturamento
+            const billingRes = await axios.get('/billing');
+            setPayments(billingRes.data || []);
 
         } catch (error) {
             console.error('Error fetching financial data', error);
@@ -75,15 +71,16 @@ const FinancialPage = () => {
         const methodsCount = {};
 
         data.forEach(p => {
-            if (p.status === 'pago') {
-                total += parseFloat(p.amount);
+            const val = parseFloat(p.value) || 0;
+            if (p.status === 'Pago') {
+                total += val;
                 paid++;
-            } else if (p.status === 'pendente') {
-                pending += parseFloat(p.amount);
+            } else if (p.status === 'Pendente') {
+                pending += val;
             }
 
-            if (p.payment_method) {
-                methodsCount[p.payment_method] = (methodsCount[p.payment_method] || 0) + 1;
+            if (p.paymentMethod) {
+                methodsCount[p.paymentMethod] = (methodsCount[p.paymentMethod] || 0) + 1;
             }
         });
 
@@ -118,18 +115,21 @@ const FinancialPage = () => {
     // ----------------------------------------------------------------------
     const handleOpenCreate = () => {
         setEditingId(null);
-        setFormData({ appointment_id: '', amount: '', status: 'pendente', due_date: new Date().toISOString().split('T')[0], payment_method: '' });
+        setFormData({ appointmentId: '', patientId: '', value: '', status: 'Pendente', dueDate: new Date().toISOString().split('T')[0], paymentMethod: '' });
         setIsModalOpen(true);
     };
 
     const handleOpenEdit = (payment) => {
         setEditingId(payment.id);
+        const rawDate = payment.dueDate || payment.due_date;
+        const formatDue = rawDate && !isNaN(new Date(rawDate).getTime()) ? new Date(rawDate).toISOString().split('T')[0] : '';
         setFormData({
-            appointment_id: payment.appointment_id,
-            amount: payment.amount,
-            status: payment.status,
-            due_date: new Date(payment.due_date).toISOString().split('T')[0],
-            payment_method: payment.payment_method
+            appointmentId: payment.appointmentId || payment.appointment_id || '',
+            patientId: payment.patientId || payment.patient_id || '',
+            value: payment.value,
+            status: payment.status || 'Pendente',
+            dueDate: formatDue,
+            paymentMethod: payment.paymentMethod || payment.payment_method || ''
         });
         setIsModalOpen(true);
     };
@@ -141,9 +141,13 @@ const FinancialPage = () => {
             message: 'Tem certeza que deseja apagar permanentemente este registro financeiro?',
             type: 'danger',
             onConfirm: async () => {
-                // TODO: Substituir por chamada real da API axios.delete(`/payments/${id}`)
-                setPayments(prev => prev.filter(p => p.id !== id));
-                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                try {
+                    await axios.delete(`/billing/${id}`);
+                    setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                    fetchData();
+                } catch (error) {
+                    alert('Erro ao excluir registro.');
+                }
             }
         });
     };
@@ -160,26 +164,35 @@ const FinancialPage = () => {
             type: 'primary',
             onConfirm: async () => {
                 try {
-                    // TODO: Substituir por chamadas reais com axios.post e axios.put
-                    const newPaymentObj = {
-                        id: editingId ? editingId : Math.floor(Math.random() * 1000),
-                        appointment_id: Number(formData.appointment_id),
-                        amount: parseFloat(formData.amount),
+                    // Descobrir PatientID baseando-se no Appointment
+                    const selectedApp = appointments.find(a => String(a.id) === String(formData.appointmentId));
+                    let derivedPatientId = formData.patientId || (selectedApp ? (selectedApp.patient_id || selectedApp.user_id) : null);
+
+                    if (!formData.appointmentId || !derivedPatientId) {
+                        alert("Erro de Associação: Toda fatura precisa estar vinculada a uma Consulta e a um Paciente cadastrado (IDs não podem ser nulos).");
+                        return;
+                    }
+
+                    const payload = {
+                        appointmentId: Number(formData.appointmentId),
+                        patientId: Number(derivedPatientId),
+                        value: parseFloat(formData.value),
                         status: formData.status,
-                        due_date: formData.due_date,
-                        payment_method: formData.payment_method
+                        dueDate: formData.dueDate,
+                        paymentMethod: formData.paymentMethod
                     };
 
                     if (editingId) {
-                        setPayments(prev => prev.map(p => p.id === editingId ? newPaymentObj : p));
+                        await axios.put(`/billing/${editingId}`, payload);
                     } else {
-                        setPayments(prev => [...prev, newPaymentObj]);
+                        await axios.post('/billing', payload);
                     }
 
                     setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                     setIsModalOpen(false);
+                    fetchData();
                 } catch (error) {
-                    alert('Erro ao processar o faturamento');
+                    alert('Erro ao processar o faturamento: ' + (error.response?.data?.message || 'Erro Interno'));
                 }
             }
         });
@@ -189,21 +202,22 @@ const FinancialPage = () => {
     // 6. Helpers de UI (Mapeamento Visual para Cores e Badges)
     // ----------------------------------------------------------------------
     const getStatusBadge = (status) => {
-        switch (status) {
-            case 'pago': return <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200"><FaCheckCircle className="text-sm" /> Pago</span>;
-            case 'pendente': return <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 border border-amber-200"><FaRegClock className="text-sm" /> Pendente</span>;
-            case 'cancelado': return <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200"><FaTimesCircle className="text-sm" /> Cancelado</span>;
-            default: return <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">Desconhecido</span>;
-        }
+        const s = (status || '').toLowerCase();
+        if (s === 'pago') return <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200"><FaCheckCircle className="text-sm" /> Pago</span>;
+        if (s === 'pendente') return <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 border border-amber-200"><FaRegClock className="text-sm" /> Pendente</span>;
+        if (s === 'cancelado') return <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200"><FaTimesCircle className="text-sm" /> Cancelado</span>;
+        return <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">Desconhecido</span>;
     };
 
-    // Lógica de Filtro Cruzado para o Módulo de Tabela
     const filteredPayments = payments.filter(p => {
-        const matchesStatus = statusFilter ? p.status === statusFilter : true;
-        // Basic search filtering (by appointment ID or status or method for now)
-        const matchesSearch = searchTerm ?
-            String(p.appointment_id).includes(searchTerm) ||
-            p.payment_method.toLowerCase().includes(searchTerm.toLowerCase())
+        const matchesStatus = statusFilter ? (p.status || '').toLowerCase() === statusFilter.toLowerCase() : true;
+
+        // Basic search filtering (by ID, appointment ID or method)
+        const sQuery = searchTerm.toLowerCase();
+        const matchesSearch = sQuery ?
+            String(p.appointmentId || p.appointment_id).includes(sQuery) ||
+            String(p.id).includes(sQuery) ||
+            (p.paymentMethod && p.paymentMethod.toLowerCase().includes(sQuery))
             : true;
 
         return matchesStatus && matchesSearch;
@@ -345,24 +359,33 @@ const FinancialPage = () => {
                             ) : (
                                 filteredPayments.map((payment) => {
                                     // Linking patient names resolving from Appts > Users.
-                                    const linkedAppt = appointments.find(a => a.id === payment.appointment_id);
+                                    const apptId = payment.appointmentId || payment.appointment_id;
+                                    const patIdFallback = payment.patientId || payment.patient_id;
+
+                                    const linkedAppt = appointments.find(a => String(a.id) === String(apptId));
                                     let patientName = "Desconhecido";
+
                                     if (linkedAppt) {
                                         const patId = linkedAppt.patient_id || linkedAppt.user_id;
-                                        const pat = patients.find(p => p.id === patId);
+                                        const pat = patients.find(p => String(p.id) === String(patId));
+                                        if (pat) patientName = pat.name;
+                                    } else if (patIdFallback) {
+                                        const pat = patients.find(p => String(p.id) === String(patIdFallback));
                                         if (pat) patientName = pat.name;
                                     }
 
                                     return (
                                         <tr key={payment.id} className="hover:bg-slate-50/80 transition-colors group">
-                                            <td className="p-4 font-medium text-slate-800">#{payment.appointment_id}</td>
+                                            <td className="p-4 font-medium text-slate-800">#{apptId || '-'}</td>
                                             <td className="p-4 text-slate-600 font-medium">{patientName}</td>
                                             <td className="p-4 text-slate-800 font-bold border-l-2 border-transparent group-hover:border-primary">
-                                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(payment.amount)}
+                                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(payment.value || 0)}
                                             </td>
-                                            <td className="p-4 text-slate-500">{new Date(payment.due_date).toLocaleDateString()}</td>
+                                            <td className="p-4 text-slate-500">
+                                                {(payment.dueDate || payment.due_date) && !isNaN(new Date(payment.dueDate || payment.due_date).getTime()) ? new Date(payment.dueDate || payment.due_date).toLocaleDateString() : 'N/D'}
+                                            </td>
                                             <td className="p-4 text-slate-600 font-medium">
-                                                {payment.payment_method || '-'}
+                                                {payment.paymentMethod || payment.payment_method || '-'}
                                             </td>
                                             <td className="p-4">
                                                 {getStatusBadge(payment.status)}
@@ -394,25 +417,67 @@ const FinancialPage = () => {
                     </div>
 
                     <div>
-                        <label className="text-sm font-bold text-slate-700 block mb-1">Referência (ID da Consulta)</label>
-                        <select className="form-control font-medium" required value={formData.appointment_id} onChange={e => setFormData({ ...formData, appointment_id: e.target.value })}>
-                            <option value="">Selecione a consulta...</option>
-                            {appointments.map(app => (
-                                <option key={app.id} value={app.id}>
-                                    Agendamento #{app.id} - {new Date(app.date).toLocaleDateString()}
-                                </option>
-                            ))}
-                        </select>
+                        <label className="text-sm font-bold text-slate-700 block mb-1">Referência (Consulta e Paciente)</label>
+                        <Select
+                            options={appointments.map(app => {
+                                const patId = app.patient_id || app.user_id;
+                                const pat = patients.find(p => String(p.id) === String(patId));
+                                const patName = pat ? pat.name : 'Desconhecido';
+                                const dateStr = new Date(app.date).toLocaleDateString();
+                                return {
+                                    value: app.id,
+                                    label: `Consulta #${app.id} - ${patName} (${dateStr})`,
+                                    patientId: patId // Keep patientId for quick access
+                                };
+                            })}
+                            value={
+                                formData.appointmentId
+                                    ? {
+                                        value: formData.appointmentId,
+                                        label: (() => {
+                                            const currentApp = appointments.find(a => String(a.id) === String(formData.appointmentId));
+                                            if (!currentApp) return `Consulta #${formData.appointmentId}`;
+                                            const pId = currentApp.patient_id || currentApp.user_id;
+                                            const p = patients.find(p => String(p.id) === String(pId));
+                                            const pName = p ? p.name : 'Desconhecido';
+                                            const dStr = new Date(currentApp.date).toLocaleDateString();
+                                            return `Consulta #${currentApp.id} - ${pName} (${dStr})`;
+                                        })()
+                                    }
+                                    : null
+                            }
+                            onChange={(selected) => setFormData({
+                                ...formData,
+                                appointmentId: selected ? selected.value : '',
+                                patientId: selected ? selected.patientId : formData.patientId
+                            })}
+                            placeholder="Pesquise por nome do paciente ou ID..."
+                            className="text-sm font-medium"
+                            styles={{
+                                control: (base) => ({
+                                    ...base,
+                                    borderColor: '#e2e8f0',
+                                    borderRadius: '0.5rem',
+                                    padding: '2px',
+                                    boxShadow: 'none',
+                                    '&:hover': {
+                                        borderColor: '#6366f1' // primary color approx
+                                    }
+                                })
+                            }}
+                            isClearable
+                            required
+                        />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="text-sm font-bold text-slate-700 block mb-1">Valor (R$)</label>
-                            <input type="number" step="0.01" className="form-control text-lg font-bold text-slate-800" required value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} placeholder="0.00" />
+                            <input type="number" step="0.01" className="form-control text-lg font-bold text-slate-800" required value={formData.value} onChange={e => setFormData({ ...formData, value: e.target.value })} placeholder="0.00" />
                         </div>
                         <div>
                             <label className="text-sm font-bold text-slate-700 block mb-1">Data de Vencimento</label>
-                            <input type="date" className="form-control" required value={formData.due_date} onChange={e => setFormData({ ...formData, due_date: e.target.value })} />
+                            <input type="date" className="form-control" required value={formData.dueDate} onChange={e => setFormData({ ...formData, dueDate: e.target.value })} />
                         </div>
                     </div>
 
@@ -420,19 +485,20 @@ const FinancialPage = () => {
                         <div>
                             <label className="text-sm font-bold text-slate-700 block mb-1">Status do Pagamento</label>
                             <select className="form-control" value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
-                                <option value="pendente">Pendente</option>
-                                <option value="pago">Pago (Liquidado)</option>
-                                <option value="cancelado">Cancelado</option>
+                                <option value="Pendente">Pendente</option>
+                                <option value="Pago">Pago (Liquidado)</option>
+                                <option value="Cancelado">Cancelado</option>
                             </select>
                         </div>
                         <div>
                             <label className="text-sm font-bold text-slate-700 block mb-1">Método de Pagamento</label>
-                            <select className="form-control" value={formData.payment_method} onChange={e => setFormData({ ...formData, payment_method: e.target.value })}>
-                                <option value="">Não definido</option>
+                            <select className="form-control" required value={formData.paymentMethod} onChange={e => setFormData({ ...formData, paymentMethod: e.target.value })}>
+                                <option value="">Selecione o Método...</option>
                                 <option value="Pix">Transf. via Pix</option>
                                 <option value="Cartão de Crédito">Cartão de Crédito</option>
+                                <option value="Cartão de Débito">Cartão de Débito</option>
                                 <option value="Dinheiro">Dinheiro (Espécie)</option>
-                                <option value="Plano de Saúde">Convênio/Plano de Saúde</option>
+                                <option value="Boleto">Boleto</option>
                             </select>
                         </div>
                     </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from '../api/axiosConfig';
+import toast from 'react-hot-toast';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
 import { FaPlus, FaEye, FaTrash, FaUserInjured, FaPhone, FaEnvelope, FaEdit, FaFileUpload, FaFilePdf, FaDownload } from 'react-icons/fa';
@@ -20,6 +21,7 @@ const PatientsPage = () => {
     const [editingId, setEditingId] = useState(null);
     const [formData, setFormData] = useState({ name: '', email: '', cpf: '', number: '', birth_date: '', gender: 'Male', address: '', city: '', state: '', zip_code: '' });
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', type: 'primary', onConfirm: null });
+    const [isLoading, setIsLoading] = useState(true);
 
     // Premium Feature: Patient Document Uploads
     const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'documents'
@@ -40,10 +42,13 @@ const PatientsPage = () => {
      */
     const fetchPatients = async () => {
         try {
+            setIsLoading(true);
             const res = await axios.get('/patients');
             setPatients(res.data);
         } catch (error) {
-            alert('Error fetching patients');
+            toast.error('Error fetching patients');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -84,7 +89,7 @@ const PatientsPage = () => {
 
             setIsModalOpen(true);
         } catch (error) {
-            alert('Error loading profile');
+            toast.error('Error loading profile');
         }
     };
 
@@ -99,7 +104,7 @@ const PatientsPage = () => {
         const maxSizeBytes = 5 * 1024 * 1024;
         const validFiles = files.filter(f => f.size <= maxSizeBytes);
         if (validFiles.length < files.length) {
-            alert("Alguns arquivos excedem o limite de 5MB e não foram anexados.");
+            toast.error("Alguns arquivos excedem o limite de 5MB e não foram anexados.");
         }
 
         const newAttachments = validFiles.map(file => {
@@ -120,9 +125,9 @@ const PatientsPage = () => {
 
         Promise.all(newAttachments).then(results => {
             setAttachments(prev => [...prev, ...results]);
-            // Ideally POST to /patients/:id/documents here
+            toast.success("Documentos anexados com sucesso ao cache temporário.");
         }).catch(err => {
-            alert("Erro ao ler arquivos. Tente novamente.");
+            toast.error("Erro ao ler arquivos. Tente novamente.");
         });
     };
 
@@ -135,7 +140,7 @@ const PatientsPage = () => {
             onConfirm: () => {
                 setAttachments(prev => prev.filter(a => a.id !== attachId));
                 setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-                // Ideally DELETE from /patients/:id/documents/:attachId
+                toast.success('Anexo removido com sucesso.');
             }
         });
     };
@@ -155,9 +160,10 @@ const PatientsPage = () => {
                 try {
                     await axios.delete(`/patients/${id}`);
                     setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                    toast.success('Paciente excluído permanentemente.');
                     fetchPatients();
                 } catch (error) {
-                    alert('Erro ao excluir paciente');
+                    toast.error('Erro ao excluir paciente');
                 }
             }
         });
@@ -201,11 +207,12 @@ const PatientsPage = () => {
                     }
                     setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                     setIsModalOpen(false);
+                    toast.success(editingId ? 'Dados do paciente atualizados!' : 'Novo paciente registrado com sucesso!');
                     fetchPatients();
                 } catch (error) {
                     console.error("Save Error:", error.response?.data || error);
                     const errorMsg = error.response?.data?.message || error.response?.data?.error || 'Verifique os campos obrigatórios vazios.';
-                    alert(`Erro ao salvar paciente: ${errorMsg}`);
+                    toast.error(`Erro ao salvar paciente: ${errorMsg}`);
                 }
             }
         });
@@ -242,7 +249,38 @@ const PatientsPage = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {patients.map((p) => {
+                            {isLoading ? (
+                                /* Skeleton Loader Premium */
+                                Array.from({ length: 5 }).map((_, idx) => (
+                                    <tr key={`skeleton-${idx}`} className="animate-pulse">
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-10 w-10 bg-slate-200 rounded-xl"></div>
+                                                <div className="space-y-2">
+                                                    <div className="h-4 bg-slate-200 rounded w-24"></div>
+                                                    <div className="h-3 bg-slate-100 rounded w-16"></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="h-5 bg-slate-200 rounded w-20"></div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="space-y-2">
+                                                <div className="h-4 bg-slate-200 rounded w-28"></div>
+                                                <div className="h-3 bg-slate-100 rounded w-32"></div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                                            <div className="flex justify-end gap-2">
+                                                <div className="h-8 w-8 bg-slate-100 rounded-lg"></div>
+                                                <div className="h-8 w-8 bg-slate-100 rounded-lg"></div>
+                                                <div className="h-8 w-8 bg-slate-100 rounded-lg"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : patients.map((p) => {
                                 const age = p.birth_date ? new Date().getFullYear() - new Date(p.birth_date).getFullYear() : 'N/A';
                                 return (
                                     <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group">
@@ -289,7 +327,7 @@ const PatientsPage = () => {
                                     </tr>
                                 )
                             })}
-                            {patients.length === 0 && (
+                            {!isLoading && patients.length === 0 && (
                                 <tr>
                                     <td colSpan="4" className="px-6 py-12 text-center text-slate-500">
                                         <div className="flex flex-col items-center justify-center">
@@ -495,7 +533,7 @@ const PatientsPage = () => {
                 message={confirmDialog.message}
                 type={confirmDialog.type}
             />
-        </div>
+        </div >
     );
 };
 

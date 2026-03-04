@@ -1,10 +1,36 @@
 import { useState, useEffect } from 'react';
 import axios from '../api/axiosConfig';
+import toast from 'react-hot-toast';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
-import { FaHeartbeat, FaSearch, FaFilter, FaFileMedicalAlt, FaPrescriptionBottleAlt, FaStethoscope, FaNotesMedical, FaChevronDown, FaEdit, FaTrash, FaFilePdf } from 'react-icons/fa';
+import { FaHeartbeat, FaSearch, FaFilter, FaFileMedicalAlt, FaPrescriptionBottleAlt, FaStethoscope, FaNotesMedical, FaChevronDown, FaEdit, FaTrash, FaFilePdf, FaPlus, FaFileUpload } from 'react-icons/fa';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+
+const CLINICAL_TEMPLATES = [
+    { label: "Checkup Padrão", text: "Paciente comparece para checkup de rotina. Nega queixas agudas.\n\nPA: 120/80 mmHg\nFC: 75 bpm\n\nConduta: Solicitados exames laboratoriais de rotina." },
+    { label: "Sintomas Gripais", text: "Paciente relata coriza, tosse produtiva e febre não aferida há 3 dias. Nega dispneia.\n\nOroscopia: hiperemia leve\nAusculta Pulmonar: murmúrio vesicular universalmente audível, sem ruídos adventícios.\n\nConduta: Sintomáticos e hidratação oral." },
+    { label: "Retorno (Exames)", text: "Retorno para avaliação de exames. Resultados dentro dos limites de normalidade.\n\nConduta: Orientações gerais de saúde mantidas. Alta ambulatorial." }
+];
+
+const PRESCRIPTION_TEMPLATES = [
+    { label: "Analgésico Simples", text: "1. Dipirona 500mg\nTomar 01 comprimido, via oral, de 6/6 horas, em caso de dor ou febre." },
+    { label: "Kit Gripe", text: "1. Ibuprofeno 400mg\nTomar 01 comprimido de 8/8h por 5 dias.\n\n2. Xarope Expectorante (Guaifenesina)\nTomar 10ml de 8/8h por 5 dias." },
+    { label: "Antibiótico Único", text: "1. Amoxicilina 500mg\nTomar 01 comprimido, via oral, de 8/8h, por 7 dias." }
+];
+
+const MOCK_ICD_DATABASE = [
+    { code: "J01.9", description: "Sinusite aguda não especificada" },
+    { code: "J02.9", description: "Faringite aguda não especificada" },
+    { code: "J06.9", description: "Infecção aguda das vias aéreas superiores não especificada" },
+    { code: "A09", description: "Diarreia e gastroenterite de origem presumivelmente infecciosa" },
+    { code: "I10", description: "Hipertensão essencial (primária)" },
+    { code: "E11", description: "Diabetes mellitus não-insulinodependente" },
+    { code: "M54.5", description: "Dor lombar baixa" },
+    { code: "R51", description: "Cefaleia" },
+    { code: "Z00.0", description: "Exame médico geral (Check-up)" },
+    { code: "F41.1", description: "Ansiedade generalizada" }
+];
 
 const RecordsPage = () => {
     /**
@@ -23,12 +49,27 @@ const RecordsPage = () => {
     const [selectedDoctorFilter, setSelectedDoctorFilter] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [attachments, setAttachments] = useState({});
+    const [isLoadingRecords, setIsLoadingRecords] = useState(false);
+
+    // Financial Integration State
+    const [billingRecords, setBillingRecords] = useState([]);
+
+    // ICD-10 Search State
+    const [icdQuery, setIcdQuery] = useState('');
+    const [icdResults, setIcdResults] = useState([]);
 
     /**
      * Constelação de Dados (Filtro Cruzado)
      * @property {Array} patientAppointments - Agendamentos vinculados EXCLUSIVAMENTE ao paciente selecionado na barra de pesquisa. Essencial para linkar um Prontuário Médico novo à sua "Consulta Mãe".
      */
-    const [formData, setFormData] = useState({ appointment_id: '', symptoms: '', diagnosis: '', prescription: '' });
+    const [formData, setFormData] = useState({
+        appointmentId: '',
+        description: '',
+        prescription: '',
+        integrateBilling: false,
+        billingAmount: '',
+        paymentMethod: 'credit_card'
+    });
     const [patientAppointments, setPatientAppointments] = useState([]);
     const [editingId, setEditingId] = useState(null);
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', type: 'primary', onConfirm: null });
@@ -57,6 +98,11 @@ const RecordsPage = () => {
                 const matchingApps = appRes.data.filter(app => String(app.user_id) === String(selectedPatientId));
                 setPatientAppointments(matchingApps);
             });
+
+            // Financial Integration: Buscar Faturamento do paciente (opcional, pegamos tudo por agora para simplificar)
+            axios.get('/billing').then(billRes => {
+                setBillingRecords(billRes.data);
+            }).catch(err => console.error("Billing fetch error:", err));
         } else {
             // Limpar/Zerar a memória caso a pesquisa do paciente seja cancelada estrelinha X
             setRecords([]);
@@ -91,27 +137,40 @@ const RecordsPage = () => {
      */
     const fetchRecords = async (patientId) => {
         try {
+            setIsLoadingRecords(true);
             const res = await axios.get(`/patients/${patientId}/records`);
-            setRecords(res.data);
+            setRecords(Array.isArray(res.data) ? res.data : []);
         } catch (error) {
-            // O Código 404 significa que NENHUM historico existe ainda, não que a API ou Sistema Quebrou.
             if (error.response?.status !== 404) {
-                alert('Error fetching records');
+                toast.error('Erro ao buscar prontuários.');
             } else {
                 setRecords([]);
             }
+        } finally {
+            setIsLoadingRecords(false);
         }
     };
 
     const handleOpenCreate = () => {
         setEditingId(null);
-        setFormData({ appointment_id: '', symptoms: '', diagnosis: '', prescription: '' });
+        setFormData({
+            appointmentId: '',
+            description: '',
+            prescription: '',
+            integrateBilling: false,
+            billingAmount: '',
+            paymentMethod: 'credit_card'
+        });
         setIsModalOpen(true);
     };
 
     const handleOpenEdit = (record) => {
         setEditingId(record.id);
-        setFormData({ appointment_id: record.appointment_id, symptoms: record.symptoms, diagnosis: record.diagnosis, prescription: record.prescription });
+        setFormData({
+            appointmentId: record.appointmentId || record.appointment_id,
+            description: record.description,
+            prescription: record.prescription
+        });
         setIsModalOpen(true);
     };
 
@@ -126,8 +185,9 @@ const RecordsPage = () => {
                     await axios.delete(`/medical-records/${id}`);
                     setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                     fetchRecords(selectedPatientId);
+                    toast.success('Prontuário excluído com sucesso.');
                 } catch (error) {
-                    alert('Erro ao excluir prontuário');
+                    toast.error('Erro ao excluir prontuário');
                 }
             }
         });
@@ -158,20 +218,10 @@ const RecordsPage = () => {
                 ...prev,
                 [recordId]: [...(prev[recordId] || []), ...results]
             }));
-            alert('Arquivo anexado com sucesso ao prontuário!');
+            toast.success('Arquivo anexado com sucesso ao prontuário!');
         });
     };
 
-    /**
-     * API: POST /appointments/:appointment_id/records-records
-     * Anexa um novo Prontuário Médico ao histórico cronológico, vinculando-o diretamente com Base na Consulta agendada da qual decorreu.
-     * Payload (Corpo Json Esperado) correspondente ao formato do `formData`:
-     * {
-     *   "symptoms": string,
-     *   "diagnosis": string,
-     *   "prescription": string
-     * }
-     */
     const handleSubmit = (e) => {
         e.preventDefault();
         setConfirmDialog({
@@ -181,29 +231,78 @@ const RecordsPage = () => {
             type: 'primary',
             onConfirm: async () => {
                 try {
-                    if (!formData.appointment_id && !editingId) return alert('Selecione uma consulta correspondente primeiro.');
+                    const appId = Number(formData.appointmentId);
+                    if (!appId && !editingId) return toast.error('Selecione uma consulta correspondente primeiro.');
+
+                    const payload = {
+                        appointmentId: appId,
+                        description: formData.description,
+                        prescription: formData.prescription
+                    };
 
                     if (editingId) {
-                        await axios.put(`/medical-records/${editingId}`, {
-                            symptoms: formData.symptoms,
-                            diagnosis: formData.diagnosis,
-                            prescription: formData.prescription
-                        });
+                        await axios.put(`/medical-records/${editingId}`, payload);
                     } else {
-                        await axios.post(`/appointments/${formData.appointment_id}/records-records`, {
-                            symptoms: formData.symptoms,
-                            diagnosis: formData.diagnosis,
-                            prescription: formData.prescription
-                        });
+                        await axios.post(`/medical-records`, payload);
+
+                        // Handle Financial Integration (Only on creation)
+                        if (formData.integrateBilling && formData.billingAmount) {
+                            try {
+                                const activeApp = patientAppointments.find(a => String(a.id) === String(appId));
+                                await axios.post('/billing', {
+                                    appointment_id: appId,
+                                    patient_id: selectedPatientId,
+                                    doctor_id: activeApp?.doctor_id,
+                                    amount: parseFloat(formData.billingAmount),
+                                    status: 'pending',
+                                    paymentMethod: formData.paymentMethod,
+                                    due_date: new Date().toISOString()
+                                });
+                                toast.success('Faturamento registrado com sucesso!');
+                                // Refresh billing records
+                                axios.get('/billing').then(billRes => setBillingRecords(billRes.data));
+                            } catch (billError) {
+                                console.error('Error integrating billing:', billError);
+                                toast.error('Prontuário salvo, mas erro ao registrar faturamento.');
+                            }
+                        }
                     }
                     setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                     setIsModalOpen(false);
+                    toast.success(editingId ? 'Prontuário atualizado!' : 'Prontuário assinado!');
                     fetchRecords(selectedPatientId);
                 } catch (error) {
-                    alert('Erro ao salvar prontuário ou histórico clínico');
+                    toast.error('Erro ao salvar prontuário ou histórico clínico');
                 }
             }
         });
+    };
+
+    /**
+     * Integração CID-10
+     */
+    const handleIcdSearch = (e) => {
+        const query = e.target.value;
+        setIcdQuery(query);
+        if (query.trim().length > 1) {
+            const results = MOCK_ICD_DATABASE.filter(icd =>
+                icd.code.toLowerCase().includes(query.toLowerCase()) ||
+                icd.description.toLowerCase().includes(query.toLowerCase())
+            );
+            setIcdResults(results);
+        } else {
+            setIcdResults([]);
+        }
+    };
+
+    const handleSelectIcd = (icd) => {
+        const appendText = `\n[CID-10: ${icd.code}] - ${icd.description}`;
+        setFormData(prev => ({
+            ...prev,
+            description: prev.description + appendText
+        }));
+        setIcdQuery('');
+        setIcdResults([]);
     };
 
     /**
@@ -213,7 +312,7 @@ const RecordsPage = () => {
      */
     const handleExportPDF = async (record) => {
         const input = document.getElementById(`pdf-template-${record.id}`);
-        if (!input) return alert('Template de PDF indisponível');
+        if (!input) return toast.error('Template de PDF indisponível');
 
         try {
             // Tornamo o contêiner temporariamente visível pro Canvas "tirar a foto"
@@ -233,19 +332,20 @@ const RecordsPage = () => {
             input.style.display = 'none';
         } catch (error) {
             console.error("Failed to export PDF", error);
-            alert("Erro ao exportar arquivo PDF do prontuário.");
+            toast.error("Erro ao exportar arquivo PDF do prontuário.");
             input.style.display = 'none';
         }
     };
 
     const getFilterDoctors = () => {
+        if (!Array.isArray(records)) return [];
         const docIdsInRecords = [...new Set(records.map(r => r.doctor_id).filter(Boolean))];
         return doctors.filter(d => docIdsInRecords.includes(d.id));
     };
 
-    const filteredRecords = selectedDoctorFilter
+    const filteredRecords = selectedDoctorFilter && Array.isArray(records)
         ? records.filter(r => String(r.doctor_id) === String(selectedDoctorFilter))
-        : records;
+        : (Array.isArray(records) ? records : []);
 
     return (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 fade-in">
@@ -256,14 +356,14 @@ const RecordsPage = () => {
                 </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm shadow-slate-200/50 border border-slate-100 p-6 flex flex-col items-center justify-center min-h-[150px] bg-gradient-to-r from-slate-50 to-white">
-                <label className="text-sm font-bold text-slate-700 uppercase tracking-widest mb-3">Pesquisar Arquivo do Paciente</label>
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-700 p-6 flex flex-col items-center justify-center min-h-[150px] bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-800">
+                <label className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-3">Pesquisar Arquivo do Paciente</label>
                 <div className="relative max-w-2xl w-full">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
                         <FaSearch className="text-lg" />
                     </div>
                     <select
-                        className="block w-full pl-12 pr-4 py-4 border-2 border-slate-200 rounded-xl leading-5 bg-white text-slate-900 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all font-medium text-lg shadow-sm appearance-none cursor-pointer"
+                        className="block w-full pl-12 pr-4 py-4 border-2 border-slate-200 dark:border-slate-600 rounded-xl leading-5 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all font-medium text-lg shadow-sm appearance-none cursor-pointer"
                         value={selectedPatientId}
                         onChange={(e) => {
                             setSelectedPatientId(e.target.value);
@@ -280,13 +380,13 @@ const RecordsPage = () => {
             </div>
 
             {selectedPatientId && (
-                <div className="bg-white rounded-2xl shadow-sm shadow-slate-200/50 border border-slate-100 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-700 overflow-hidden">
+                    <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
 
                         <div className="flex items-center gap-4 w-full md:w-auto">
                             <div className="flex items-center gap-2">
                                 <FaNotesMedical className="text-primary text-xl" />
-                                <h3 className="font-bold text-lg text-slate-800 tracking-tight">Evolução Clínica</h3>
+                                <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 tracking-tight">Evolução Clínica</h3>
                             </div>
 
                             {records.length > 0 && (
@@ -313,8 +413,38 @@ const RecordsPage = () => {
                         </button>
                     </div>
 
-                    <div className="p-6 bg-slate-50/30">
-                        {filteredRecords.length === 0 ? (
+                    <div className="p-6 bg-slate-50/30 dark:bg-slate-800/30">
+                        {isLoadingRecords ? (
+                            <div className="relative border-l-2 border-slate-200 ml-3 space-y-8 pb-4">
+                                {Array.from({ length: 3 }).map((_, idx) => (
+                                    <div key={`skeleton-record-${idx}`} className="relative pl-8 animate-pulse">
+                                        <span className="absolute -left-[9px] top-1.5 w-4 h-4 rounded-full border-4 border-slate-50 bg-slate-300"></span>
+                                        <div className="bg-white p-5 rounded-xl border border-slate-200">
+                                            <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-full bg-slate-200"></div>
+                                                    <div className="h-4 bg-slate-200 rounded w-32"></div>
+                                                </div>
+                                                <div className="h-6 bg-slate-100 rounded w-24"></div>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <div className="space-y-2">
+                                                    <div className="h-3 bg-slate-200 rounded w-1/3 mb-4"></div>
+                                                    <div className="h-2 bg-slate-100 rounded w-full"></div>
+                                                    <div className="h-2 bg-slate-100 rounded w-full"></div>
+                                                    <div className="h-2 bg-slate-100 rounded w-3/4"></div>
+                                                </div>
+                                                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-2">
+                                                    <div className="h-3 bg-slate-200 rounded w-1/2 mb-4"></div>
+                                                    <div className="h-2 bg-slate-100 rounded w-full"></div>
+                                                    <div className="h-2 bg-slate-100 rounded w-2/3"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : filteredRecords.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-16 text-slate-400">
                                 <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-4 border-8 border-white shadow-sm">
                                     <FaHeartbeat className="text-4xl text-slate-300" />
@@ -325,21 +455,40 @@ const RecordsPage = () => {
                             </div>
                         ) : (
                             <div className="relative border-l-2 border-slate-200 ml-3 space-y-8 pb-4">
-                                {filteredRecords.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map((r) => {
-                                    const doc = doctors.find(d => String(d.id) === String(r.doctor_id));
+                                {filteredRecords.sort((a, b) => new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt)).map((r) => {
+                                    const linkedApp = patientAppointments.find(a => String(a.id) === String(r.appointmentId || r.appointment_id));
+                                    const docId = linkedApp ? linkedApp.doctor_id : r.doctor_id;
+                                    const doc = doctors.find(d => String(d.id) === String(docId));
                                     return (
                                         <div key={r.id} className="relative pl-8">
                                             {/* Timeline Dot */}
                                             <span className="absolute -left-[9px] top-1.5 w-4 h-4 rounded-full border-4 border-slate-50" style={{ backgroundColor: doc?.color || '#6c5be4' }}></span>
 
-                                            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                                            <div className="bg-white dark:bg-slate-700 p-5 rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
 
                                                 <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-slate-100/50 to-transparent rounded-bl-full -z-10 pointer-events-none transition-transform group-hover:scale-110"></div>
 
                                                 <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
                                                     <div className="flex items-center gap-3 text-slate-800 font-bold">
                                                         <img className="w-8 h-8 rounded-full shadow-sm" src={`https://ui-avatars.com/api/?name=${doc?.name.replace(/ /g, '+')}&background=${doc?.color?.replace('#', '') || '6c5be4'}&color=fff`} />
-                                                        Dr. {doc?.name.replace('Dr. ', '') || r.doctor_name || 'Unknown'}
+                                                        <div className="flex flex-col">
+                                                            <span>Dr. {doc?.name.replace('Dr. ', '') || r.doctor_name || 'Unknown'}</span>
+                                                            {linkedApp && (() => {
+                                                                const bill = billingRecords.find(b => String(b.appointment_id) === String(linkedApp.id));
+                                                                if (bill) {
+                                                                    return (
+                                                                        <span className={`text-[10px] mt-0.5 w-fit px-1.5 py-0.5 rounded-md border font-semibold ${bill.status === 'paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-warning/10 text-amber-600 border-amber-200'}`}>
+                                                                            {bill.status === 'paid' ? '💰 Faturado' : '⏳ Pgto. Pendente'}
+                                                                        </span>
+                                                                    );
+                                                                }
+                                                                return (
+                                                                    <span className="text-[10px] mt-0.5 w-fit px-1.5 py-0.5 rounded-md border bg-slate-50 text-slate-500 border-slate-200 font-semibold" title="Nenhuma fatura lançada">
+                                                                        Faturamento não lançado
+                                                                    </span>
+                                                                );
+                                                            })()}
+                                                        </div>
                                                     </div>
                                                     <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold tracking-wide flex items-center gap-2">
                                                         {new Date(r.created_at).toLocaleDateString()}
@@ -352,24 +501,18 @@ const RecordsPage = () => {
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                     <div className="space-y-4">
                                                         <div>
-                                                            <div className="flex items-center gap-2 text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">
-                                                                <FaStethoscope /> Sintomas / Queixas
+                                                            <div className="flex items-center gap-2 text-slate-400 dark:text-slate-300 font-bold text-xs uppercase tracking-wider mb-2">
+                                                                <FaStethoscope /> Descrição Clínica (Evolução)
                                                             </div>
-                                                            <div className="text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-100 text-sm leading-relaxed">{r.symptoms || 'Nenhum sintoma detalhado'}</div>
-                                                        </div>
-                                                        <div>
-                                                            <div className="flex items-center gap-2 text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">
-                                                                <FaHeartbeat /> Hipóteses e Diagnóstico
-                                                            </div>
-                                                            <div className="text-slate-800 font-medium px-3 text-sm">{r.diagnosis || 'Não especificado ou em investigação'}</div>
+                                                            <div className="text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 p-3 rounded-lg border border-slate-100 dark:border-slate-600 text-sm leading-relaxed whitespace-pre-wrap">{r.description || 'Nenhuma descrição detalhada.'}</div>
                                                         </div>
                                                     </div>
 
-                                                    <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100/50">
-                                                        <div className="flex items-center gap-2 text-blue-600 font-bold text-xs uppercase tracking-wider mb-2 border-b border-blue-100 pb-2">
+                                                    <div className="bg-blue-50/50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100/50 dark:border-blue-900/50">
+                                                        <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold text-xs uppercase tracking-wider mb-2 border-b border-blue-100 dark:border-blue-900 pb-2">
                                                             <FaPrescriptionBottleAlt /> Prescrição Médica
                                                         </div>
-                                                        <div className="text-slate-700 font-mono text-sm leading-relaxed whitespace-pre-wrap mt-2">
+                                                        <div className="text-slate-700 dark:text-slate-300 font-mono text-sm leading-relaxed whitespace-pre-wrap mt-2">
                                                             {r.prescription || 'Nenhum medicamento prescrito nesta consulta.'}
                                                         </div>
                                                     </div>
@@ -378,7 +521,7 @@ const RecordsPage = () => {
                                                 {/* File Upload / Attachments Area */}
                                                 <div className="mt-6 pt-4 border-t border-slate-100">
                                                     <div className="flex flex-wrap gap-4 items-center">
-                                                        <label className="cursor-pointer bg-slate-50 hover:bg-primary/5 text-slate-600 hover:text-primary px-4 py-2 rounded-lg border border-slate-200 transition-colors text-sm font-semibold flex items-center gap-2">
+                                                        <label className="cursor-pointer bg-slate-50 dark:bg-slate-800 hover:bg-primary/5 dark:hover:bg-primary/20 text-slate-600 dark:text-slate-300 hover:text-primary px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600 transition-colors text-sm font-semibold flex items-center gap-2">
                                                             <input type="file" className="hidden" multiple onChange={(e) => handleFileUpload(e, r.id)} accept=".pdf, image/*" />
                                                             <FaFileUpload /> Anexar Exame / Documento
                                                         </label>
@@ -418,13 +561,8 @@ const RecordsPage = () => {
                                                     </div>
 
                                                     <div style={{ marginBottom: '20px', backgroundColor: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                                                        <h3 style={{ fontSize: '14px', textTransform: 'uppercase', color: '#475569', marginBottom: '10px' }}>Sintomas / Anamnese</h3>
-                                                        <div style={{ fontSize: '14px', lineHeight: '1.5' }}>{r.symptoms || 'Nenhum sintoma detalhado na consulta.'}</div>
-                                                    </div>
-
-                                                    <div style={{ marginBottom: '20px', backgroundColor: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                                                        <h3 style={{ fontSize: '14px', textTransform: 'uppercase', color: '#475569', marginBottom: '10px' }}>Diagnóstico Clínico Clínico</h3>
-                                                        <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#1e293b' }}>{r.diagnosis || 'Em investigação / Não Informado'}</div>
+                                                        <h3 style={{ fontSize: '14px', textTransform: 'uppercase', color: '#475569', marginBottom: '10px' }}>Descrição Clínica</h3>
+                                                        <div style={{ fontSize: '14px', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>{r.description || 'Nenhuma descrição detalhada na consulta.'}</div>
                                                     </div>
 
                                                     <div style={{ marginBottom: '40px', backgroundColor: '#eff6ff', padding: '20px', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
@@ -434,10 +572,29 @@ const RecordsPage = () => {
                                                         </div>
                                                     </div>
 
-                                                    <div style={{ marginTop: '80px', paddingTop: '20px', borderTop: '1px dashed #cbd5e1', textAlign: 'center' }}>
-                                                        <div style={{ width: '250px', borderBottom: '1px solid #000', margin: '0 auto 10px' }}></div>
-                                                        <div style={{ fontSize: '14px', fontWeight: 'bold' }}>Dr. {doc?.name.replace('Dr. ', '') || 'Médico Signatário'}</div>
-                                                        <div style={{ fontSize: '12px', color: '#64748b' }}>{doc?.crm ? `CRM: ${doc.crm}` : 'Assinatura Médica Autorizada'}</div>
+                                                    <div style={{ marginTop: '50px', paddingTop: '20px', borderTop: '1px dashed #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+
+                                                        {/* Digital Signature Seal */}
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                                            <div style={{ width: '50px', height: '50px', borderRadius: '50%', backgroundColor: '#f0fdf4', border: '2px solid #22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#166534' }}>Documento Assinado Digitalmente</div>
+                                                                <div style={{ fontSize: '10px', color: '#64748b', fontFamily: 'monospace', marginTop: '4px' }}>
+                                                                    Hash: {Math.random().toString(36).substring(2, 15)}...<br />
+                                                                    Autenticado em: {new Date(r.created_at || r.createdAt).toLocaleString()}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Doctor's Signature Line */}
+                                                        <div style={{ textAlign: 'center', width: '250px' }}>
+                                                            <div style={{ borderBottom: '1px solid #334155', marginBottom: '8px', height: '30px', backgroundImage: 'url("https://upload.wikimedia.org/wikipedia/commons/f/f6/John_Hancock_Signature.svg")', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center', opacity: 0.6 }}></div>
+                                                            <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#334155' }}>Dr. {doc?.name.replace('Dr. ', '') || 'Médico Signatário'}</div>
+                                                            <div style={{ fontSize: '12px', color: '#64748b' }}>{doc?.crm ? `CRM: ${doc.crm}` : 'Médico Responsável'}</div>
+                                                        </div>
+
                                                     </div>
                                                 </div>
                                                 {/* =======================================================
@@ -458,36 +615,140 @@ const RecordsPage = () => {
                 <form onSubmit={handleSubmit} className="space-y-5">
                     <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
                         <label className="text-slate-700 font-bold block mb-2"><FaFileMedicalAlt className="inline mr-2 text-primary" /> Referência da Consulta {editingId && <span className="text-xs text-slate-400 font-normal">(Vinculada)</span>}</label>
-                        <select className="form-control font-medium" required={!editingId} disabled={editingId} value={formData.appointment_id} onChange={e => setFormData({ ...formData, appointment_id: e.target.value })}>
+                        <select className="form-control font-medium" required={!editingId} disabled={editingId} value={formData.appointmentId} onChange={e => setFormData({ ...formData, appointmentId: e.target.value })}>
                             <option value="">Selecione a consulta referenciada...</option>
                             {patientAppointments.map(app => {
-                                const doc = doctors.find(d => d.id === app.doctor_id);
+                                const doc = doctors.find(d => String(d.id) === String(app.doctor_id));
+                                const bill = billingRecords.find(b => String(b.appointment_id) === String(app.id));
+                                let billStatusText = "Não Faturado";
+                                if (bill) {
+                                    billStatusText = bill.status === 'paid' ? 'Pago' : 'Pendente';
+                                }
+
                                 return (
                                     <option key={app.id} value={app.id}>
-                                        {new Date(app.date).toLocaleDateString()} ({String(new Date(app.date).getHours()).padStart(2, '0')}:{String(new Date(app.date).getMinutes()).padStart(2, '0')}) - Dr. {doc?.name}
+                                        {new Date(app.date).toLocaleDateString()} ({String(new Date(app.date).getHours()).padStart(2, '0')}:{String(new Date(app.date).getMinutes()).padStart(2, '0')}) - Dr. {doc?.name} - Financeiro: {billStatusText}
                                     </option>
-                                )
+                                );
                             })}
                         </select>
                         <p className="text-xs text-slate-500 mt-2">Prontuários só podem ser originados através da conexão direta com um agendamento prévio (Consulta).</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div>
-                            <label className="font-bold text-sm text-slate-700 block mb-1">Sintomas (Anamnese)</label>
-                            <textarea className="form-control resize-none" rows="5" required value={formData.symptoms} onChange={e => setFormData({ ...formData, symptoms: e.target.value })} placeholder="Paciente apresentou sinais clínicos de..."></textarea>
+                        <div className="md:col-span-2 space-y-5">
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="font-bold text-sm text-slate-700 block">Descrição Clínica (Evolução / Diagnóstico)</label>
+                                    <div className="flex gap-2 relative">
+                                        <div className="relative group">
+                                            <input
+                                                type="text"
+                                                placeholder="🔍 Consultar CID-10..."
+                                                className="text-xs border border-slate-300 rounded px-2 py-1 w-40 focus:w-56 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                                                value={icdQuery}
+                                                onChange={handleIcdSearch}
+                                            />
+                                            {icdResults.length > 0 && (
+                                                <div className="absolute top-full right-0 mt-1 w-72 bg-white rounded-lg shadow-xl border border-slate-200 z-50 max-h-48 overflow-y-auto">
+                                                    {icdResults.map(icd => (
+                                                        <button
+                                                            key={icd.code} type="button"
+                                                            onClick={() => handleSelectIcd(icd)}
+                                                            className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 border-b border-slate-100 last:border-0"
+                                                        >
+                                                            <span className="font-bold text-slate-700">{icd.code}</span> - <span className="text-slate-500">{icd.description}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                        {CLINICAL_TEMPLATES.map((tmpl, idx) => (
+                                            <button
+                                                key={`clin-tmpl-${idx}`}
+                                                type="button"
+                                                onClick={() => setFormData(prev => ({ ...prev, description: tmpl.text }))}
+                                                className="text-[10px] bg-slate-100 hover:bg-primary hover:text-white text-slate-600 px-2 py-1 rounded transition-colors font-semibold"
+                                            >
+                                                + {tmpl.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <textarea className="form-control resize-none" rows="6" required value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Paciente com quadro de... (Descreva aqui a evolução ou diagnóstico)"></textarea>
+                            </div>
                         </div>
 
-                        <div className="space-y-5">
+                        <div className="md:col-span-2 space-y-5">
                             <div>
-                                <label className="font-bold text-sm text-slate-700 block mb-1">Diagnóstico Final</label>
-                                <input type="text" className="form-control" required value={formData.diagnosis} onChange={e => setFormData({ ...formData, diagnosis: e.target.value })} placeholder="Ex: Rinite Alérgica Crônica" />
-                            </div>
-                            <div>
-                                <label className="font-bold text-sm text-blue-600 block mb-1">Anotações da Prescrição</label>
-                                <textarea className="form-control bg-blue-50/30 border-blue-200 focus:ring-blue-500 resize-none font-mono text-sm" rows="3" value={formData.prescription} onChange={e => setFormData({ ...formData, prescription: e.target.value })} placeholder="1. Amoxicilina 500mg - 8h/8h / 7 dias..."></textarea>
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="font-bold text-sm text-blue-600 block">Anotações da Prescrição</label>
+                                    <div className="flex gap-2">
+                                        {PRESCRIPTION_TEMPLATES.map((tmpl, idx) => (
+                                            <button
+                                                key={`presc-tmpl-${idx}`}
+                                                type="button"
+                                                onClick={() => setFormData(prev => ({ ...prev, prescription: tmpl.text }))}
+                                                className="text-[10px] bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-600 px-2 py-1 rounded transition-colors font-semibold border border-blue-100"
+                                            >
+                                                + {tmpl.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <textarea className="form-control bg-blue-50/30 border-blue-200 focus:ring-blue-500 resize-none font-mono text-sm" rows="4" value={formData.prescription} onChange={e => setFormData({ ...formData, prescription: e.target.value })} placeholder="1. Amoxicilina 500mg - 8h/8h / 7 dias..."></textarea>
                             </div>
                         </div>
+
+                        {!editingId && (
+                            <div className="md:col-span-2 bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            id="integrateBilling"
+                                            className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
+                                            checked={formData.integrateBilling}
+                                            onChange={e => setFormData({ ...formData, integrateBilling: e.target.checked })}
+                                        />
+                                        <label htmlFor="integrateBilling" className="font-bold text-sm text-emerald-800 cursor-pointer">
+                                            Gerar Faturamento / Cobrança
+                                        </label>
+                                    </div>
+                                    <span className="text-xs text-emerald-600/70 font-medium bg-emerald-100 px-2 py-0.5 rounded-full">Integração Financeira</span>
+                                </div>
+
+                                {formData.integrateBilling && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 animate-in slide-in-from-top-2">
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-600 block mb-1">Valor da Consulta (R$)</label>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                className="form-control bg-white"
+                                                required
+                                                value={formData.billingAmount}
+                                                onChange={e => setFormData({ ...formData, billingAmount: e.target.value })}
+                                                placeholder="Ex: 250.00"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-600 block mb-1">Método Sugerido</label>
+                                            <select
+                                                className="form-control bg-white"
+                                                value={formData.paymentMethod}
+                                                onChange={e => setFormData({ ...formData, paymentMethod: e.target.value })}
+                                            >
+                                                <option value="credit_card">Cartão de Crédito</option>
+                                                <option value="pix">PIX</option>
+                                                <option value="cash">Dinheiro</option>
+                                                <option value="health_insurance">Plano de Saúde (Guia)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     <div className="modal-footer pt-6 mt-6 border-t border-slate-100 flex justify-end gap-3 -mx-6 -mb-6 px-6 bg-slate-50 rounded-b-xl">

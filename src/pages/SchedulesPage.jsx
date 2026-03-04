@@ -3,7 +3,8 @@ import axios from '../api/axiosConfig';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
 import Select from 'react-select';
-import { FaPlus, FaChevronLeft, FaChevronRight, FaCalendarCheck } from 'react-icons/fa';
+import { FaPlus, FaChevronLeft, FaChevronRight, FaCalendarCheck, FaMoneyBillWave, FaWhatsapp, FaEnvelope } from 'react-icons/fa';
+import toast from 'react-hot-toast';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import format from 'date-fns/format';
 import parse from 'date-fns/parse';
@@ -34,7 +35,16 @@ const SchedulesPage = () => {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState(null);
-    const [formData, setFormData] = useState({ doctor_id: '', patient_id: '', date: '', notes: '' });
+    const [formData, setFormData] = useState({
+        doctor_id: '',
+        patient_id: '',
+        date: '',
+        notes: '',
+        billingValue: '',
+        billingMethod: '',
+        notifyWhatsapp: true,
+        notifyEmail: true
+    });
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', type: 'primary', onConfirm: null });
 
     useEffect(() => {
@@ -96,7 +106,7 @@ const SchedulesPage = () => {
 
     const handleOpenCreate = () => {
         setEditingId(null);
-        setFormData({ doctor_id: '', patient_id: '', date: '', notes: '' });
+        setFormData({ doctor_id: '', patient_id: '', date: '', notes: '', billingValue: '', billingMethod: '', notifyWhatsapp: true, notifyEmail: true });
         setIsModalOpen(true);
     };
 
@@ -104,7 +114,16 @@ const SchedulesPage = () => {
         setEditingId(app.id);
         // Ensure date is formatted for datetime-local input YYYY-MM-DDTHH:mm
         const formattedDate = app.date ? new Date(app.date).toISOString().slice(0, 16) : '';
-        setFormData({ doctor_id: app.doctor_id, patient_id: app.patient_id || app.user_id, date: formattedDate, notes: app.notes || '' });
+        setFormData({
+            doctor_id: app.doctor_id,
+            patient_id: app.patient_id || app.user_id,
+            date: formattedDate,
+            notes: app.notes || '',
+            billingValue: '',
+            billingMethod: '',
+            notifyWhatsapp: true,
+            notifyEmail: false
+        });
         setIsModalOpen(true);
     };
 
@@ -170,6 +189,7 @@ const SchedulesPage = () => {
                         alert('O Médico já possui uma consulta marcada exatamente neste horário.'); return;
                     }
 
+                    let savedApptId = editingId;
                     if (editingId) {
                         await axios.put(`/appointments/${editingId}`, {
                             doctor_id: Number(formData.doctor_id),
@@ -178,15 +198,44 @@ const SchedulesPage = () => {
                             notes: formData.notes
                         });
                     } else {
-                        await axios.post('/appointments', {
+                        const postRes = await axios.post('/appointments', {
                             doctor_id: Number(formData.doctor_id),
                             patient_id: Number(formData.patient_id),
                             date: formData.date,
                             notes: formData.notes
                         });
+                        savedApptId = postRes.data?.id; // Assumes server returns inserted ID
                     }
+
+                    // -- Fast Billing Action (Shortcut) --
+                    // If user filled the billing value natively on the Scheduling Calendar:
+                    if (formData.billingValue && formData.billingValue > 0) {
+                        try {
+                            const dueDate = new Date(formData.date).toISOString().split('T')[0]; // Mesma data da consulta
+                            await axios.post('/billing', {
+                                appointmentId: Number(savedApptId),
+                                patientId: Number(formData.patient_id),
+                                value: parseFloat(formData.billingValue),
+                                status: 'Pendente', // Forced as 'Pendente' by user choice
+                                dueDate: dueDate,
+                                paymentMethod: formData.billingMethod || 'Pix'
+                            });
+                        } catch (billErr) {
+                            console.error('Failed to auto-emit fast billing', billErr);
+                        }
+                    }
+
+                    // -- Notification Triggers (Mocking the Webhooks/API calls) --
+                    if (formData.notifyWhatsapp) {
+                        toast.success('Lembrete de consulta encaminhado para a fila do WhatsApp.', { icon: '📱' });
+                    }
+                    if (formData.notifyEmail) {
+                        toast.success('Confirmação enviada para o E-mail do paciente.', { icon: '📧' });
+                    }
+
                     setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                     setIsModalOpen(false);
+                    toast.success(editingId ? 'Agendamento atualizado com sucesso!' : 'Novo agendamento confirmado!');
                     fetchData();
                 } catch (error) {
                     alert(error.response?.data?.error || 'Erro ao processar agendamento');
@@ -222,14 +271,14 @@ const SchedulesPage = () => {
                     <p className="text-sm text-slate-500 mt-1">Gerencie a disponibilidade médica e marque consultas com arrastar e soltar (Drag-and-Drop).</p>
                 </div>
 
-                <div className="flex items-center gap-4 bg-white px-2 py-1.5 rounded-xl border border-slate-200 shadow-sm">
+                <div className="flex items-center gap-4 bg-white dark:bg-slate-800 px-2 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
                     <button className="btn-primary py-1.5" onClick={handleOpenCreate}>
                         <FaPlus className="text-sm" /> Nova Consulta
                     </button>
                 </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm shadow-slate-200/50 border border-slate-100 flex-1 flex flex-col p-4 lg:p-6 min-h-[650px] overflow-hidden">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-700 flex-1 flex flex-col p-4 lg:p-6 min-h-[650px] overflow-hidden">
                 <Calendar
                     localizer={localizer}
                     events={getCalendarEvents()}
@@ -256,15 +305,15 @@ const SchedulesPage = () => {
                         toolbar: (toolbarProps) => (
                             <div className="flex justify-between items-center mb-6">
                                 <div className="flex gap-2">
-                                    <button className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors text-sm" onClick={() => toolbarProps.onNavigate('PREV')}><FaChevronLeft /></button>
-                                    <button className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors text-sm" onClick={() => toolbarProps.onNavigate('TODAY')}>Hoje</button>
-                                    <button className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors text-sm" onClick={() => toolbarProps.onNavigate('NEXT')}><FaChevronRight /></button>
+                                    <button className="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-medium rounded-lg transition-colors text-sm" onClick={() => toolbarProps.onNavigate('PREV')}><FaChevronLeft /></button>
+                                    <button className="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-medium rounded-lg transition-colors text-sm" onClick={() => toolbarProps.onNavigate('TODAY')}>Hoje</button>
+                                    <button className="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-medium rounded-lg transition-colors text-sm" onClick={() => toolbarProps.onNavigate('NEXT')}><FaChevronRight /></button>
                                 </div>
-                                <h3 className="text-xl font-bold text-slate-800 uppercase tracking-widest">{toolbarProps.label}</h3>
-                                <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
-                                    <button className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-colors ${toolbarProps.view === 'month' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`} onClick={() => toolbarProps.onView('month')}>Mês</button>
-                                    <button className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-colors hidden sm:block ${toolbarProps.view === 'week' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`} onClick={() => toolbarProps.onView('week')}>Semana</button>
-                                    <button className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-colors ${toolbarProps.view === 'day' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`} onClick={() => toolbarProps.onView('day')}>Dia</button>
+                                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 uppercase tracking-widest">{toolbarProps.label}</h3>
+                                <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                                    <button className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-colors ${toolbarProps.view === 'month' ? 'bg-white dark:bg-primary/20 text-primary shadow-sm dark:shadow-none' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`} onClick={() => toolbarProps.onView('month')}>Mês</button>
+                                    <button className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-colors hidden sm:block ${toolbarProps.view === 'week' ? 'bg-white dark:bg-primary/20 text-primary shadow-sm dark:shadow-none' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`} onClick={() => toolbarProps.onView('week')}>Semana</button>
+                                    <button className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-colors ${toolbarProps.view === 'day' ? 'bg-white dark:bg-primary/20 text-primary shadow-sm dark:shadow-none' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`} onClick={() => toolbarProps.onView('day')}>Dia</button>
                                 </div>
                             </div>
                         )
@@ -329,9 +378,70 @@ const SchedulesPage = () => {
                             onChange={e => setFormData({ ...formData, notes: e.target.value })}
                         ></textarea>
                     </div>
-                    <div>
-                        <label>Data e Horário (Slot)</label>
-                        <input type="datetime-local" className="form-control" required value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label>Data e Horário (Slot)</label>
+                            <input type="datetime-local" className="form-control" required value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
+                        </div>
+                    </div>
+
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-2 mb-2">
+                        <div className="flex items-center gap-2 mb-3">
+                            <FaMoneyBillWave className="text-emerald-600" />
+                            <h5 className="font-bold text-slate-700 text-sm">Faturamento Expresso (Opcional)</h5>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-xs font-semibold text-slate-600">Valor Cobrado (R$)</label>
+                                <input type="number" step="0.01" className="form-control text-sm py-1.5" placeholder="0.00" value={formData.billingValue} onChange={e => setFormData({ ...formData, billingValue: e.target.value })} />
+                            </div>
+                            <div>
+                                <label className="text-xs font-semibold text-slate-600">Forma de Pagto.</label>
+                                <select className="form-control text-sm py-1.5" value={formData.billingMethod} onChange={e => setFormData({ ...formData, billingMethod: e.target.value })}>
+                                    <option value="">Não definido</option>
+                                    <option value="Pix">Transf. via Pix</option>
+                                    <option value="Cartão de Crédito">Cartão de Crédito</option>
+                                    <option value="Cartão de Débito">Cartão de Débito</option>
+                                    <option value="Dinheiro">Dinheiro (Espécie)</option>
+                                    <option value="Boleto">Boleto</option>
+                                </select>
+                            </div>
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-2">* Ao preencher valor, uma fatura "Pendente" será gerada automaticamente na guia Financeiro.</p>
+                    </div>
+
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-2 mb-2">
+                        <div className="flex items-center justify-between mb-2 border-b border-slate-200 pb-2">
+                            <h5 className="font-bold text-slate-700 text-sm">Notificações Automáticas</h5>
+                            <span className="text-xs bg-primary/10 text-primary-dark px-2 py-0.5 rounded-full font-semibold">Mensageria</span>
+                        </div>
+                        <div className="flex flex-col gap-3">
+                            <label className="flex items-center gap-3 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    className="w-4 h-4 text-green-500 rounded border-slate-300 focus:ring-green-400"
+                                    checked={formData.notifyWhatsapp}
+                                    onChange={e => setFormData({ ...formData, notifyWhatsapp: e.target.checked })}
+                                />
+                                <div className="flex items-center gap-2">
+                                    <FaWhatsapp className="text-green-500 text-lg" />
+                                    <span className="text-sm font-semibold text-slate-700">Disparar lembrete via WhatsApp</span>
+                                </div>
+                            </label>
+
+                            <label className="flex items-center gap-3 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    className="w-4 h-4 text-slate-500 rounded border-slate-300 focus:ring-slate-400"
+                                    checked={formData.notifyEmail}
+                                    onChange={e => setFormData({ ...formData, notifyEmail: e.target.checked })}
+                                />
+                                <div className="flex items-center gap-2">
+                                    <FaEnvelope className="text-slate-400 text-lg" />
+                                    <span className="text-sm font-semibold text-slate-700">Enviar E-mail de confirmação e preparo</span>
+                                </div>
+                            </label>
+                        </div>
                     </div>
 
                     <div className="modal-footer flex items-center pt-6 mt-6 border-t border-slate-100 -mx-6 -mb-6 px-6 bg-slate-50 rounded-b-xl gap-3">

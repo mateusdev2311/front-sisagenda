@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { FaHeartbeat, FaTachometerAlt, FaUsers, FaUserMd, FaUserInjured, FaCalendarAlt, FaFileMedicalAlt, FaCog } from 'react-icons/fa';
 
 const Sidebar = () => {
+
     const linkClass = ({ isActive }) =>
         `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 mt-1 ${isActive
             ? 'bg-primary text-white shadow-md shadow-primary/20 font-medium'
@@ -40,13 +41,13 @@ const Sidebar = () => {
                             <FaUserMd className="text-lg opacity-80" /> <span>Equipe Médica</span>
                         </NavLink>
                     </li>
+
+                    <li className={titleClass}>Operações</li>
                     <li>
                         <NavLink to="/patients" className={linkClass}>
                             <FaUserInjured className="text-lg opacity-80" /> <span>Registro de Pacientes</span>
                         </NavLink>
                     </li>
-
-                    <li className={titleClass}>Operações</li>
                     <li>
                         <NavLink to="/schedules" className={linkClass}>
                             <FaCalendarAlt className="text-lg opacity-80" /> <span>Agendamentos</span>
