@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
 import { FaHeartbeat, FaSearch, FaFilter, FaFileMedicalAlt, FaPrescriptionBottleAlt, FaStethoscope, FaNotesMedical, FaChevronDown, FaEdit, FaTrash, FaFilePdf, FaPlus, FaFileUpload } from 'react-icons/fa';
+import Select from 'react-select';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
@@ -19,18 +20,7 @@ const PRESCRIPTION_TEMPLATES = [
     { label: "Antibiótico Único", text: "1. Amoxicilina 500mg\nTomar 01 comprimido, via oral, de 8/8h, por 7 dias." }
 ];
 
-const MOCK_ICD_DATABASE = [
-    { code: "J01.9", description: "Sinusite aguda não especificada" },
-    { code: "J02.9", description: "Faringite aguda não especificada" },
-    { code: "J06.9", description: "Infecção aguda das vias aéreas superiores não especificada" },
-    { code: "A09", description: "Diarreia e gastroenterite de origem presumivelmente infecciosa" },
-    { code: "I10", description: "Hipertensão essencial (primária)" },
-    { code: "E11", description: "Diabetes mellitus não-insulinodependente" },
-    { code: "M54.5", description: "Dor lombar baixa" },
-    { code: "R51", description: "Cefaleia" },
-    { code: "Z00.0", description: "Exame médico geral (Check-up)" },
-    { code: "F41.1", description: "Ansiedade generalizada" }
-];
+
 
 const RecordsPage = () => {
     /**
@@ -50,13 +40,13 @@ const RecordsPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [attachments, setAttachments] = useState({});
     const [isLoadingRecords, setIsLoadingRecords] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const recordsPerPage = 3;
 
     // Financial Integration State
     const [billingRecords, setBillingRecords] = useState([]);
 
-    // ICD-10 Search State
-    const [icdQuery, setIcdQuery] = useState('');
-    const [icdResults, setIcdResults] = useState([]);
+
 
     /**
      * Constelação de Dados (Filtro Cruzado)
@@ -68,7 +58,7 @@ const RecordsPage = () => {
         prescription: '',
         integrateBilling: false,
         billingAmount: '',
-        paymentMethod: 'credit_card'
+        paymentMethod: 'Cartão de Crédito'
     });
     const [patientAppointments, setPatientAppointments] = useState([]);
     const [editingId, setEditingId] = useState(null);
@@ -90,14 +80,9 @@ const RecordsPage = () => {
      */
     useEffect(() => {
         if (selectedPatientId) {
-            // Fetch records history
+            setCurrentPage(1); // Reseta a paginação ao trocar de paciente
+            // Buscar histórico de consultas e cruzar com todos os registros de prontuário do back
             fetchRecords(selectedPatientId);
-
-            // Buscar consultas antigas na agenda para contexto
-            axios.get('/appointments').then(appRes => {
-                const matchingApps = appRes.data.filter(app => String(app.user_id) === String(selectedPatientId));
-                setPatientAppointments(matchingApps);
-            });
 
             // Financial Integration: Buscar Faturamento do paciente (opcional, pegamos tudo por agora para simplificar)
             axios.get('/billing').then(billRes => {
@@ -130,22 +115,30 @@ const RecordsPage = () => {
     };
 
     /**
-     * API: GET /patients/:patientId/records
-     * Requisição dedicada especificamente para recuperar todo o histórico clínico (Prontuários) com base no ID do Cliente.
-     * Array de Resposta Esperado: [{ id, appointment_id, doctor_id, symptoms, diagnosis, prescription, created_at }]
-     * @param {string} patientId - A referência numéricado Paciente Alvo. 
+     * API: Busca Unificada Global /records e Cruzamento de Agendamentos /appointments
      */
     const fetchRecords = async (patientId) => {
         try {
             setIsLoadingRecords(true);
-            const res = await axios.get(`/patients/${patientId}/records`);
-            setRecords(Array.isArray(res.data) ? res.data : []);
+            const [recRes, appRes] = await Promise.all([
+                axios.get('/records'),
+                axios.get('/appointments')
+            ]);
+
+            const allAppointments = appRes.data || [];
+            const matchingApps = allAppointments.filter(app => String(app.patient_id || app.user_id) === String(patientId));
+            setPatientAppointments(matchingApps);
+
+            const matchingAppIds = matchingApps.map(a => String(a.id));
+            const allRecords = Array.isArray(recRes.data) ? recRes.data : [];
+            const patientRecords = allRecords.filter(r => matchingAppIds.includes(String(r.appointmentId || r.appointment_id)));
+
+            setRecords(patientRecords);
         } catch (error) {
-            if (error.response?.status !== 404) {
-                toast.error('Erro ao buscar prontuários.');
-            } else {
-                setRecords([]);
-            }
+            console.error('Fetch global records error:', error);
+            toast.error('Erro ao buscar prontuários no servidor.');
+            setRecords([]);
+            setPatientAppointments([]);
         } finally {
             setIsLoadingRecords(false);
         }
@@ -159,7 +152,7 @@ const RecordsPage = () => {
             prescription: '',
             integrateBilling: false,
             billingAmount: '',
-            paymentMethod: 'credit_card'
+            paymentMethod: 'Cartão de Crédito'
         });
         setIsModalOpen(true);
     };
@@ -224,6 +217,17 @@ const RecordsPage = () => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+
+        if (!editingId) {
+            const appIdForValidation = Number(formData.appointmentId);
+            if (!appIdForValidation) return toast.error('Selecione uma consulta correspondente primeiro.');
+
+            const existingRecord = records.find(r => String(r.appointmentId || r.appointment_id) === String(appIdForValidation));
+            if (existingRecord) {
+                return toast.error('Já existe um prontuário inserido para este agendamento. Você deve editar o registro existente.');
+            }
+        }
+
         setConfirmDialog({
             isOpen: true,
             title: editingId ? 'Salvar Alterações' : 'Assinar Prontuário',
@@ -233,6 +237,7 @@ const RecordsPage = () => {
                 try {
                     const appId = Number(formData.appointmentId);
                     if (!appId && !editingId) return toast.error('Selecione uma consulta correspondente primeiro.');
+                    const activeApp = patientAppointments.find(a => String(a.id) === String(appId));
 
                     const payload = {
                         appointmentId: appId,
@@ -243,20 +248,18 @@ const RecordsPage = () => {
                     if (editingId) {
                         await axios.put(`/medical-records/${editingId}`, payload);
                     } else {
-                        await axios.post(`/medical-records`, payload);
+                        await axios.post(`/appointments/records`, payload);
 
                         // Handle Financial Integration (Only on creation)
                         if (formData.integrateBilling && formData.billingAmount) {
                             try {
-                                const activeApp = patientAppointments.find(a => String(a.id) === String(appId));
                                 await axios.post('/billing', {
-                                    appointment_id: appId,
-                                    patient_id: selectedPatientId,
-                                    doctor_id: activeApp?.doctor_id,
-                                    amount: parseFloat(formData.billingAmount),
-                                    status: 'pending',
+                                    appointmentId: appId,
+                                    patientId: Number(selectedPatientId),
+                                    value: parseFloat(formData.billingAmount),
+                                    status: 'Pendente',
                                     paymentMethod: formData.paymentMethod,
-                                    due_date: new Date().toISOString()
+                                    dueDate: new Date().toISOString().split('T')[0]
                                 });
                                 toast.success('Faturamento registrado com sucesso!');
                                 // Refresh billing records
@@ -278,32 +281,7 @@ const RecordsPage = () => {
         });
     };
 
-    /**
-     * Integração CID-10
-     */
-    const handleIcdSearch = (e) => {
-        const query = e.target.value;
-        setIcdQuery(query);
-        if (query.trim().length > 1) {
-            const results = MOCK_ICD_DATABASE.filter(icd =>
-                icd.code.toLowerCase().includes(query.toLowerCase()) ||
-                icd.description.toLowerCase().includes(query.toLowerCase())
-            );
-            setIcdResults(results);
-        } else {
-            setIcdResults([]);
-        }
-    };
 
-    const handleSelectIcd = (icd) => {
-        const appendText = `\n[CID-10: ${icd.code}] - ${icd.description}`;
-        setFormData(prev => ({
-            ...prev,
-            description: prev.description + appendText
-        }));
-        setIcdQuery('');
-        setIcdResults([]);
-    };
 
     /**
      * Módulo Premium: Geração e Exportação de PDF
@@ -347,6 +325,12 @@ const RecordsPage = () => {
         ? records.filter(r => String(r.doctor_id) === String(selectedDoctorFilter))
         : (Array.isArray(records) ? records : []);
 
+    const totalPages = Math.ceil(filteredRecords.length / recordsPerPage);
+
+    const paginatedRecords = filteredRecords
+        .sort((a, b) => new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt))
+        .slice((currentPage - 1) * recordsPerPage, currentPage * recordsPerPage);
+
     return (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 fade-in">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
@@ -359,23 +343,36 @@ const RecordsPage = () => {
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-700 p-6 flex flex-col items-center justify-center min-h-[150px] bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-800">
                 <label className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-3">Pesquisar Arquivo do Paciente</label>
                 <div className="relative max-w-2xl w-full">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-                        <FaSearch className="text-lg" />
-                    </div>
-                    <select
-                        className="block w-full pl-12 pr-4 py-4 border-2 border-slate-200 dark:border-slate-600 rounded-xl leading-5 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all font-medium text-lg shadow-sm appearance-none cursor-pointer"
-                        value={selectedPatientId}
-                        onChange={(e) => {
-                            setSelectedPatientId(e.target.value);
+                    <Select
+                        options={patients.map(p => ({ value: p.id, label: `${p.name} - ${p.crm ? `CRM: ${p.crm}` : p.email}` }))}
+                        value={selectedPatientId ? { value: selectedPatientId, label: patients.find(p => String(p.id) === String(selectedPatientId))?.name } : null}
+                        onChange={(selected) => {
+                            setSelectedPatientId(selected ? selected.value : '');
                             setSelectedDoctorFilter('');
                         }}
-                    >
-                        <option value="">-- Toque para selecionar um paciente --</option>
-                        {patients.map(p => <option key={p.id} value={p.id}>{p.name} - {p.crm ? `CRM: ${p.crm}` : p.email}</option>)}
-                    </select>
-                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-400">
-                        <FaChevronDown />
-                    </div>
+                        placeholder="Pesquise pelo nome, e-mail ou CRM do paciente..."
+                        className="text-base font-medium"
+                        classNamePrefix="react-select"
+                        isClearable
+                        styles={{
+                            control: (base, state) => ({
+                                ...base,
+                                borderColor: state.isFocused ? '#6c5be4' : '#e2e8f0',
+                                borderRadius: '0.75rem',
+                                padding: '8px 4px',
+                                boxShadow: state.isFocused ? '0 0 0 4px rgba(108, 91, 228, 0.1)' : 'none',
+                                '&:hover': {
+                                    borderColor: '#6c5be4'
+                                }
+                            }),
+                            menu: (base) => ({
+                                ...base,
+                                borderRadius: '0.75rem',
+                                overflow: 'hidden',
+                                zIndex: 50
+                            })
+                        }}
+                    />
                 </div>
             </div>
 
@@ -455,7 +452,7 @@ const RecordsPage = () => {
                             </div>
                         ) : (
                             <div className="relative border-l-2 border-slate-200 ml-3 space-y-8 pb-4">
-                                {filteredRecords.sort((a, b) => new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt)).map((r) => {
+                                {paginatedRecords.map((r) => {
                                     const linkedApp = patientAppointments.find(a => String(a.id) === String(r.appointmentId || r.appointment_id));
                                     const docId = linkedApp ? linkedApp.doctor_id : r.doctor_id;
                                     const doc = doctors.find(d => String(d.id) === String(docId));
@@ -473,6 +470,11 @@ const RecordsPage = () => {
                                                         <img className="w-8 h-8 rounded-full shadow-sm" src={`https://ui-avatars.com/api/?name=${doc?.name.replace(/ /g, '+')}&background=${doc?.color?.replace('#', '') || '6c5be4'}&color=fff`} />
                                                         <div className="flex flex-col">
                                                             <span>Dr. {doc?.name.replace('Dr. ', '') || r.doctor_name || 'Unknown'}</span>
+                                                            {linkedApp && (
+                                                                <span className="text-[11px] text-slate-400 font-semibold mb-1">
+                                                                    Consulta do dia: {new Date(linkedApp.date).toLocaleDateString('pt-BR')} às {String(new Date(linkedApp.date).getHours()).padStart(2, '0')}:{String(new Date(linkedApp.date).getMinutes()).padStart(2, '0')}
+                                                                </span>
+                                                            )}
                                                             {linkedApp && (() => {
                                                                 const bill = billingRecords.find(b => String(b.appointment_id) === String(linkedApp.id));
                                                                 if (bill) {
@@ -572,21 +574,7 @@ const RecordsPage = () => {
                                                         </div>
                                                     </div>
 
-                                                    <div style={{ marginTop: '50px', paddingTop: '20px', borderTop: '1px dashed #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-
-                                                        {/* Digital Signature Seal */}
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                                            <div style={{ width: '50px', height: '50px', borderRadius: '50%', backgroundColor: '#f0fdf4', border: '2px solid #22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                                                            </div>
-                                                            <div>
-                                                                <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#166534' }}>Documento Assinado Digitalmente</div>
-                                                                <div style={{ fontSize: '10px', color: '#64748b', fontFamily: 'monospace', marginTop: '4px' }}>
-                                                                    Hash: {Math.random().toString(36).substring(2, 15)}...<br />
-                                                                    Autenticado em: {new Date(r.created_at || r.createdAt).toLocaleString()}
-                                                                </div>
-                                                            </div>
-                                                        </div>
+                                                    <div style={{ marginTop: '50px', paddingTop: '20px', borderTop: '1px dashed #cbd5e1', display: 'flex', justifyContent: 'end', alignItems: 'flex-start' }}>
 
                                                         {/* Doctor's Signature Line */}
                                                         <div style={{ textAlign: 'center', width: '250px' }}>
@@ -605,6 +593,28 @@ const RecordsPage = () => {
                                         </div>
                                     );
                                 })}
+
+                                {totalPages > 1 && (
+                                    <div className="flex justify-between items-center mt-8 pl-8 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                        <button
+                                            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-semibold text-sm transition-colors"
+                                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                            disabled={currentPage === 1}
+                                        >
+                                            Página Anterior
+                                        </button>
+                                        <span className="text-sm font-bold text-slate-500">
+                                            Página {currentPage} de {totalPages}
+                                        </span>
+                                        <button
+                                            className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-semibold text-sm transition-colors"
+                                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                            disabled={currentPage === totalPages}
+                                        >
+                                            Próxima Página
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
@@ -615,23 +625,58 @@ const RecordsPage = () => {
                 <form onSubmit={handleSubmit} className="space-y-5">
                     <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
                         <label className="text-slate-700 font-bold block mb-2"><FaFileMedicalAlt className="inline mr-2 text-primary" /> Referência da Consulta {editingId && <span className="text-xs text-slate-400 font-normal">(Vinculada)</span>}</label>
-                        <select className="form-control font-medium" required={!editingId} disabled={editingId} value={formData.appointmentId} onChange={e => setFormData({ ...formData, appointmentId: e.target.value })}>
-                            <option value="">Selecione a consulta referenciada...</option>
-                            {patientAppointments.map(app => {
-                                const doc = doctors.find(d => String(d.id) === String(app.doctor_id));
-                                const bill = billingRecords.find(b => String(b.appointment_id) === String(app.id));
-                                let billStatusText = "Não Faturado";
-                                if (bill) {
-                                    billStatusText = bill.status === 'paid' ? 'Pago' : 'Pendente';
-                                }
+                        <Select
+                            options={patientAppointments
+                                .filter(app => {
+                                    if (editingId && String(formData.appointmentId) === String(app.id)) return true;
+                                    return !records.some(r => String(r.appointmentId || r.appointment_id) === String(app.id));
+                                })
+                                .map(app => {
+                                    const doc = doctors.find(d => String(d.id) === String(app.doctor_id));
+                                    const bill = billingRecords.find(b => String(b.appointment_id) === String(app.id));
+                                    let billStatusText = "Não Faturado";
+                                    if (bill) {
+                                        billStatusText = bill.status === 'paid' || bill.status === 'Pago' ? 'Pago' : 'Pendente';
+                                    }
 
-                                return (
-                                    <option key={app.id} value={app.id}>
-                                        {new Date(app.date).toLocaleDateString()} ({String(new Date(app.date).getHours()).padStart(2, '0')}:{String(new Date(app.date).getMinutes()).padStart(2, '0')}) - Dr. {doc?.name} - Financeiro: {billStatusText}
-                                    </option>
-                                );
-                            })}
-                        </select>
+                                    return {
+                                        value: app.id,
+                                        label: `${new Date(app.date).toLocaleDateString('pt-BR')} às ${String(new Date(app.date).getHours()).padStart(2, '0')}:${String(new Date(app.date).getMinutes()).padStart(2, '0')} - Dr. ${doc?.name?.replace('Dr. ', '') || 'Médico'} - Fin: ${billStatusText}`
+                                    };
+                                })}
+                            value={formData.appointmentId ? {
+                                value: formData.appointmentId,
+                                label: (() => {
+                                    const app = patientAppointments.find(a => String(a.id) === String(formData.appointmentId));
+                                    if (!app) return 'Selecione a consulta...';
+                                    const doc = doctors.find(d => String(d.id) === String(app.doctor_id));
+                                    const bill = billingRecords.find(b => String(b.appointment_id) === String(app.id));
+                                    let billStatusText = "Não Faturado";
+                                    if (bill) {
+                                        billStatusText = bill.status === 'paid' || bill.status === 'Pago' ? 'Pago' : 'Pendente';
+                                    }
+                                    return `${new Date(app.date).toLocaleDateString('pt-BR')} às ${String(new Date(app.date).getHours()).padStart(2, '0')}:${String(new Date(app.date).getMinutes()).padStart(2, '0')} - Dr. ${doc?.name?.replace('Dr. ', '') || 'Médico'} - Fin: ${billStatusText}`;
+                                })()
+                            } : null}
+                            onChange={(selected) => setFormData({ ...formData, appointmentId: selected ? selected.value : '' })}
+                            placeholder="Pesquise (Ex: nome, data, médico) ou selecione a consulta..."
+                            className="text-sm font-medium"
+                            classNamePrefix="react-select"
+                            isDisabled={!!editingId}
+                            isClearable
+                            styles={{
+                                control: (base, state) => ({
+                                    ...base,
+                                    borderColor: state.isFocused ? '#6c5be4' : '#e2e8f0',
+                                    borderRadius: '0.5rem',
+                                    padding: '2px',
+                                    boxShadow: state.isFocused ? '0 0 0 2px rgba(108, 91, 228, 0.1)' : 'none',
+                                    '&:hover': {
+                                        borderColor: '#6c5be4'
+                                    }
+                                })
+                            }}
+                        />
                         <p className="text-xs text-slate-500 mt-2">Prontuários só podem ser originados através da conexão direta com um agendamento prévio (Consulta).</p>
                     </div>
 
@@ -641,28 +686,7 @@ const RecordsPage = () => {
                                 <div className="flex items-center justify-between mb-2">
                                     <label className="font-bold text-sm text-slate-700 block">Descrição Clínica (Evolução / Diagnóstico)</label>
                                     <div className="flex gap-2 relative">
-                                        <div className="relative group">
-                                            <input
-                                                type="text"
-                                                placeholder="🔍 Consultar CID-10..."
-                                                className="text-xs border border-slate-300 rounded px-2 py-1 w-40 focus:w-56 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-                                                value={icdQuery}
-                                                onChange={handleIcdSearch}
-                                            />
-                                            {icdResults.length > 0 && (
-                                                <div className="absolute top-full right-0 mt-1 w-72 bg-white rounded-lg shadow-xl border border-slate-200 z-50 max-h-48 overflow-y-auto">
-                                                    {icdResults.map(icd => (
-                                                        <button
-                                                            key={icd.code} type="button"
-                                                            onClick={() => handleSelectIcd(icd)}
-                                                            className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 border-b border-slate-100 last:border-0"
-                                                        >
-                                                            <span className="font-bold text-slate-700">{icd.code}</span> - <span className="text-slate-500">{icd.description}</span>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
+
                                         {CLINICAL_TEMPLATES.map((tmpl, idx) => (
                                             <button
                                                 key={`clin-tmpl-${idx}`}
@@ -739,10 +763,10 @@ const RecordsPage = () => {
                                                 value={formData.paymentMethod}
                                                 onChange={e => setFormData({ ...formData, paymentMethod: e.target.value })}
                                             >
-                                                <option value="credit_card">Cartão de Crédito</option>
-                                                <option value="pix">PIX</option>
-                                                <option value="cash">Dinheiro</option>
-                                                <option value="health_insurance">Plano de Saúde (Guia)</option>
+                                                <option value="Cartão de Crédito">Cartão de Crédito</option>
+                                                <option value="Pix">PIX</option>
+                                                <option value="Dinheiro (Espécie)">Dinheiro</option>
+                                                <option value="Plano de Saúde (Guia)">Plano de Saúde (Guia)</option>
                                             </select>
                                         </div>
                                     </div>

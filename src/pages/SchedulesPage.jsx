@@ -26,6 +26,12 @@ const localizer = dateFnsLocalizer({
     locales,
 });
 
+const TIME_SLOTS = [];
+for (let h = 8; h <= 18; h++) {
+    TIME_SLOTS.push(`${String(h).padStart(2, '0')}:00`);
+    if (h !== 18) TIME_SLOTS.push(`${String(h).padStart(2, '0')}:30`);
+}
+
 const SchedulesPage = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [view, setView] = useState('month');
@@ -89,8 +95,13 @@ const SchedulesPage = () => {
             const doc = doctors.find(d => d.id === app.doctor_id);
             const pat = patients.find(p => p.id === (app.patient_id || app.user_id)) || { name: 'Paciente' };
 
-            const startDate = new Date(app.date);
-            // Defaulting appointment duration to 1 hora (since we don't have end_time yet in API)
+            // Ensure literal processing by stripping out timezone interference from API
+            let rawDateStr = String(app.date);
+            if (rawDateStr.includes('Z')) rawDateStr = rawDateStr.split('Z')[0];
+            if (rawDateStr.includes('-03:00')) rawDateStr = rawDateStr.replace('-03:00', '');
+
+            // Reconstruct the exact nominal YYYY/MM/DD and HH/mm into Local Time natively
+            const startDate = new Date(rawDateStr);
             const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
 
             return {
@@ -98,7 +109,7 @@ const SchedulesPage = () => {
                 title: `${pat.name.split(' ')[0]} c/ Dr. ${doc?.name.split(' ')[0] || ''}`,
                 start: startDate,
                 end: endDate,
-                resource: app, // Cópia completa para usar no OnClick/Editar
+                resource: app,
                 bgColor: doc?.color || '#6c5be4'
             };
         });
@@ -174,7 +185,15 @@ const SchedulesPage = () => {
             type: 'primary',
             onConfirm: async () => {
                 try {
-                    const appointmentDate = new Date(formData.date);
+                    let finalDateStr = formData.date;
+                    if (!finalDateStr.includes('T')) {
+                        finalDateStr = `${finalDateStr}T08:00`;
+                    }
+                    if (finalDateStr.length === 16) {
+                        finalDateStr = `${finalDateStr}:00`;
+                    }
+
+                    const appointmentDate = new Date(finalDateStr);
                     if (isNaN(appointmentDate)) {
                         alert('Data Inválida'); return;
                     }
@@ -194,14 +213,14 @@ const SchedulesPage = () => {
                         await axios.put(`/appointments/${editingId}`, {
                             doctor_id: Number(formData.doctor_id),
                             patient_id: Number(formData.patient_id),
-                            date: formData.date,
+                            date: finalDateStr,
                             notes: formData.notes
                         });
                     } else {
                         const postRes = await axios.post('/appointments', {
                             doctor_id: Number(formData.doctor_id),
                             patient_id: Number(formData.patient_id),
-                            date: formData.date,
+                            date: finalDateStr,
                             notes: formData.notes
                         });
                         savedApptId = postRes.data?.id; // Assumes server returns inserted ID
@@ -290,6 +309,8 @@ const SchedulesPage = () => {
                     endAccessor="end"
                     style={{ height: '100%' }}
                     culture="pt-BR"
+                    min={new Date(0, 0, 0, 7, 0, 0)} // Start daily grid at 07:00am
+                    max={new Date(0, 0, 0, 21, 0, 0)} // End daily grid at 21:00pm
                     messages={{
                         next: "Próximo",
                         previous: "Anterior",
@@ -352,6 +373,7 @@ const SchedulesPage = () => {
                             onChange={(selected) => setFormData({ ...formData, patient_id: selected ? selected.value : '' })}
                             placeholder="Pesquise pelo nome do paciente..."
                             className="text-sm font-medium"
+                            classNamePrefix="react-select"
                             styles={{
                                 control: (base) => ({
                                     ...base,
@@ -380,9 +402,60 @@ const SchedulesPage = () => {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label>Data e Horário (Slot)</label>
-                            <input type="datetime-local" className="form-control" required value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
+                            <label>Data da Consulta</label>
+                            <input
+                                type="date"
+                                className="form-control"
+                                required
+                                value={formData.date ? formData.date.split('T')[0] : ''}
+                                onChange={e => {
+                                    const newDate = e.target.value;
+                                    const currentTime = formData.date && formData.date.includes('T') ? formData.date.split('T')[1].substring(0, 5) : '08:00';
+                                    setFormData({ ...formData, date: `${newDate}T${currentTime}` });
+                                }}
+                            />
                         </div>
+                        {formData.date && formData.date.split('T')[0] && formData.doctor_id ? (
+                            <div className="md:col-span-2 mt-2">
+                                <label className="mb-2 block font-bold text-slate-700">Horários Disponíveis (Livres)</label>
+                                <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
+                                    {TIME_SLOTS.map(time => {
+                                        const isSelected = formData.date && formData.date.includes('T') && formData.date.split('T')[1].substring(0, 5) === time;
+                                        const slotDateTimeStr = `${formData.date.split('T')[0]}T${time}`;
+                                        const slotTimeMs = new Date(slotDateTimeStr).getTime();
+
+                                        const isBusy = appointments.some(evt => {
+                                            if (String(evt.doctor_id) !== String(formData.doctor_id)) return false;
+                                            if (String(evt.id) === String(editingId)) return false;
+                                            return new Date(evt.date).getTime() === slotTimeMs;
+                                        });
+
+                                        if (isBusy) return null; // Não mostra os ocupados, conforme solicitado pelo usuário
+
+                                        return (
+                                            <button
+                                                key={time}
+                                                type="button"
+                                                onClick={() => {
+                                                    const currentDate = formData.date.split('T')[0];
+                                                    setFormData({ ...formData, date: `${currentDate}T${time}` });
+                                                }}
+                                                className={`py-2 text-sm font-bold rounded-lg border transition-all duration-200 shadow-sm ${isSelected
+                                                    ? 'bg-primary border-primary text-white shadow-md scale-105'
+                                                    : 'bg-white border-slate-300 text-slate-700 hover:border-primary hover:text-primary hover:bg-primary/5'
+                                                    }`}
+                                            >
+                                                {time}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="md:col-span-2 mt-2 p-4 bg-slate-50 border border-slate-200 rounded-lg text-center text-slate-500 text-sm">
+                                Selecione um Médico e uma Data para visualizar a grade de horários livres disponíveis.
+                            </div>
+                        )}
                     </div>
 
                     <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-2 mb-2">

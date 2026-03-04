@@ -46,7 +46,7 @@ const LoginPage = () => {
                         <FaHeartbeat />
                     </div>
                     <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Bem-vindo de volta</h2>
-                    <p className="text-slate-500 mt-1 text-sm">Acesse sua conta do Sisagendamento</p>
+                    <p className="text-slate-500 mt-1 text-sm">Acesse sua conta do Sisagenda</p>
                 </div>
 
                 {error && (
@@ -121,7 +121,7 @@ const LoginPage = () => {
                 </form>
 
                 <div className="mt-8 text-center text-sm text-slate-500">
-                    <p>Não possui uma conta? <a href="#" className="font-medium text-primary hover:text-primary-dark hover:underline">Contate o Administrador</a></p>
+                    <p>Não possui uma conta? <a href="https://wa.me/5538988178623" className="font-medium text-primary hover:text-primary-dark hover:underline">Contate o Administrador</a></p>
                 </div>
             </div>
         </div>

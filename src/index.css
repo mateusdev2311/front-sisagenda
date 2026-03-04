@@ -10,7 +10,7 @@
   body {
     @apply bg-slate-50 text-slate-800 m-0 p-0 antialiased transition-colors duration-300;
   }
-  
+
   .dark body {
     @apply bg-slate-900 text-slate-100;
   }
@@ -19,16 +19,27 @@
   .dark .bg-white {
     background-color: #1e293b !important;
   }
-  .dark .bg-slate-50, .dark .bg-slate-50\/50, .dark .bg-slate-50\/80 {
+
+  .dark .bg-slate-50,
+  .dark .bg-slate-50\/50,
+  .dark .bg-slate-50\/80 {
     background-color: #0f172a !important;
   }
-  .dark .text-slate-800, .dark .text-slate-700, .dark .text-gray-800 {
+
+  .dark .text-slate-800,
+  .dark .text-slate-700,
+  .dark .text-gray-800 {
     color: #f1f5f9 !important;
   }
-  .dark .text-slate-500, .dark .text-slate-600 {
+
+  .dark .text-slate-500,
+  .dark .text-slate-600 {
     color: #94a3b8 !important;
   }
-  .dark .border-slate-100, .dark .border-slate-200, .dark .border-slate-300 {
+
+  .dark .border-slate-100,
+  .dark .border-slate-200,
+  .dark .border-slate-300 {
     border-color: #334155 !important;
   }
 }
@@ -40,8 +51,59 @@ textarea {
   @apply border border-slate-300 rounded-md px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 bg-white text-slate-900;
 }
 
-.dark input, .dark select, .dark textarea {
+.dark input,
+.dark select,
+.dark textarea {
   @apply border-slate-600 bg-slate-800 text-slate-100 placeholder-slate-400 focus:ring-primary-light;
+}
+
+/* React Select Dark Mode Overrides */
+.dark .react-select__control {
+  background-color: #1e293b !important;
+  border-color: #475569 !important;
+}
+
+.dark .react-select__menu {
+  background-color: #1e293b !important;
+  border-color: #475569 !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dark .react-select__option {
+  color: #f1f5f9 !important;
+}
+
+.dark .react-select__option--is-focused {
+  background-color: #334155 !important;
+}
+
+.dark .react-select__option--is-selected {
+  background-color: #6366f1 !important;
+  color: white !important;
+}
+
+.dark .react-select__single-value {
+  color: #f1f5f9 !important;
+}
+
+.dark .react-select__input-container {
+  color: #f1f5f9 !important;
+}
+
+.dark .react-select__placeholder {
+  color: #94a3b8 !important;
+}
+
+.dark .react-select__indicator {
+  color: #94a3b8 !important;
+}
+
+.dark .react-select__indicator:hover {
+  color: #cbd5e1 !important;
+}
+
+.dark .react-select__indicator-separator {
+  background-color: #475569 !important;
 }
 
 label {
