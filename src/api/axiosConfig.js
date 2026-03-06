@@ -37,7 +37,10 @@ axios.interceptors.response.use(
         return response;
     },
     (error) => {
-        if (error.response && error.response.status === 401) {
+        const isLoginPage = window.location.pathname === '/login';
+        const isLoginRequest = error.config && error.config.url && error.config.url.includes('/login');
+
+        if (error.response && error.response.status === 401 && !isLoginPage && !isLoginRequest) {
             // Token is expired or invalid
             console.warn('Unauthorized access - Redirecting to login.');
             localStorage.removeItem('token');
