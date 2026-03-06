@@ -123,8 +123,13 @@ const SchedulesPage = () => {
 
     const handleOpenEdit = (app) => {
         setEditingId(app.id);
-        // Ensure date is formatted for datetime-local input YYYY-MM-DDTHH:mm
-        const formattedDate = app.date ? new Date(app.date).toISOString().slice(0, 16) : '';
+        // Normaliza o formato vindo do banco ("2026-03-10 12:30:00-03") sem converter para UTC
+        let rawDate = String(app.date || '');
+        if (rawDate.includes(' ') && !rawDate.includes('T')) rawDate = rawDate.replace(' ', 'T');
+        if (rawDate.includes('Z')) rawDate = rawDate.split('Z')[0];
+        if (rawDate.includes('-03:00')) rawDate = rawDate.replace('-03:00', '');
+        if (/T\d{2}:\d{2}:\d{2}-03$/.test(rawDate)) rawDate = rawDate.replace(/-03$/, '');
+        const formattedDate = rawDate.slice(0, 16); // "YYYY-MM-DDTHH:mm"
         setFormData({
             doctor_id: app.doctor_id,
             patient_id: app.patient_id || app.user_id,
