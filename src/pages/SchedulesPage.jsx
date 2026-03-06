@@ -5,6 +5,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import Select from 'react-select';
 import { FaPlus, FaChevronLeft, FaChevronRight, FaCalendarCheck, FaMoneyBillWave, FaWhatsapp, FaEnvelope } from 'react-icons/fa';
 import toast from 'react-hot-toast';
+import { sendKentroMessage } from '../services/kentroService';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import format from 'date-fns/format';
 import parse from 'date-fns/parse';
@@ -38,6 +39,7 @@ const SchedulesPage = () => {
     const [appointments, setAppointments] = useState([]);
     const [doctors, setDoctors] = useState([]);
     const [patients, setPatients] = useState([]);
+    const [kentroConfig, setKentroConfig] = useState(null); // { base_url, api_key, queue_id }
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState(null);
@@ -55,6 +57,13 @@ const SchedulesPage = () => {
 
     useEffect(() => {
         fetchData();
+        // Carregar config de integração Kentro uma vez ao montar
+        axios.get('/integrations')
+            .then(res => {
+                const data = Array.isArray(res.data) ? res.data[0] : res.data;
+                if (data?.base_url) setKentroConfig(data);
+            })
+            .catch(() => { }); // Sem integração configurada é OK silenciosamente
     }, [currentDate]);
 
     /**
@@ -249,9 +258,39 @@ const SchedulesPage = () => {
                         }
                     }
 
-                    // -- Notification Triggers (Mocking the Webhooks/API calls) --
-                    if (formData.notifyWhatsapp) {
-                        toast.success('Lembrete de consulta encaminhado para a fila do WhatsApp.', { icon: '📱' });
+                    // -- Notificação WhatsApp via Kentro (só se o toggle estiver marcado) --
+                    if (formData.notifyWhatsapp && kentroConfig) {
+                        try {
+                            // Busca o paciente diretamente na API para garantir o contato mais atualizado
+                            const patientRes = await axios.get(`/patients/${formData.patient_id}`);
+                            const patient = patientRes.data;
+                            const rawPhone = patient?.number; // Campo 'number' do modelo de paciente
+                            if (rawPhone) {
+                                // Remove tudo que não é dígito e adiciona DDI 55 se não tiver
+                                const digits = rawPhone.replace(/\D/g, '');
+                                const phone = digits.startsWith('55') ? digits : `55${digits}`;
+
+                                const apptDateFormatted = new Date(finalDateStr).toLocaleDateString('pt-BR');
+                                const apptTimeFormatted = new Date(finalDateStr).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                                const doc = doctors.find(d => String(d.id) === String(formData.doctor_id));
+                                const text = `✅ Olá, ${patient.name.split(' ')[0]}! Seu agendamento foi confirmado para o dia *${apptDateFormatted}* às *${apptTimeFormatted}* com Dr(a). *${doc?.name || 'Médico'}*. Em caso de dúvidas, entre em contato conosco.`;
+                                await sendKentroMessage({
+                                    baseUrl: kentroConfig.base_url,
+                                    apiKey: kentroConfig.api_key,
+                                    queueId: kentroConfig.queue_id,
+                                    number: phone,
+                                    text,
+                                });
+                                toast.success('Lembrete de consulta enviado via WhatsApp!', { icon: '📱' });
+                            } else {
+                                toast('Paciente sem telefone cadastrado. WhatsApp não enviado.', { icon: '⚠️' });
+                            }
+                        } catch (waErr) {
+                            console.error('Falha no disparo WhatsApp Kentro:', waErr);
+                            toast.error('Não foi possível enviar o WhatsApp.');
+                        }
+                    } else if (formData.notifyWhatsapp && !kentroConfig) {
+                        toast('Integração Kentro não configurada. Configure em Preferências.', { icon: '⚠️' });
                     }
                     if (formData.notifyEmail) {
                         toast.success('Confirmação enviada para o E-mail do paciente.', { icon: '📧' });

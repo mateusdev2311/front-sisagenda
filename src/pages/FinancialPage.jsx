@@ -4,12 +4,14 @@ import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
 import { FaMoneyBillWave, FaSearch, FaFilter, FaFileInvoiceDollar, FaCheckCircle, FaRegClock, FaTimesCircle, FaChevronDown, FaEdit, FaTrash, FaPlus, FaChartLine } from 'react-icons/fa';
 import Select from 'react-select';
+import { useSettings } from '../context/SettingsContext';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
 import { Doughnut, Bar } from 'react-chartjs-2';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 
 const FinancialPage = () => {
+    const { settings } = useSettings();
     // ----------------------------------------------------------------------
     // 1. Estados da Aplicação (Data State)
     // ----------------------------------------------------------------------
@@ -244,7 +246,7 @@ const FinancialPage = () => {
                         <div>
                             <p className="text-sm font-medium text-slate-500 mb-1">Receita Liquidada (Mês)</p>
                             <h3 className="text-3xl font-bold text-slate-800">
-                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.totalRevenue)}
+                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: settings.currency || 'BRL' }).format(stats.totalRevenue)}
                             </h3>
                         </div>
                         <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl shadow-inner">
@@ -259,7 +261,7 @@ const FinancialPage = () => {
                         <div>
                             <p className="text-sm font-medium text-slate-500 mb-1">Valores Pendentes</p>
                             <h3 className="text-3xl font-bold text-slate-800">
-                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.pendingAmount)}
+                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: settings.currency || 'BRL' }).format(stats.pendingAmount)}
                             </h3>
                         </div>
                         <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center text-xl shadow-inner">
@@ -379,7 +381,7 @@ const FinancialPage = () => {
                                             <td className="p-4 font-medium text-slate-800">#{apptId || '-'}</td>
                                             <td className="p-4 text-slate-600 font-medium">{patientName}</td>
                                             <td className="p-4 text-slate-800 font-bold border-l-2 border-transparent group-hover:border-primary">
-                                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(payment.value || 0)}
+                                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: settings.currency || 'BRL' }).format(payment.value || 0)}
                                             </td>
                                             <td className="p-4 text-slate-500">
                                                 {(payment.dueDate || payment.due_date) && !isNaN(new Date(payment.dueDate || payment.due_date).getTime()) ? new Date(payment.dueDate || payment.due_date).toLocaleDateString() : 'N/D'}

@@ -3,10 +3,12 @@ import axios from '../api/axiosConfig';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Filler } from 'chart.js';
 import { Doughnut, Line, Bar } from 'react-chartjs-2';
 import { FaCalendarCheck, FaUserMd, FaArrowUp, FaChartLine, FaMoneyBillWave, FaClock, FaCheckCircle } from 'react-icons/fa';
+import { useSettings } from '../context/SettingsContext';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Filler);
 
 const DashboardHome = () => {
+    const { settings } = useSettings();
     /**
      * Estados de Agregação de Dados da Dashboard
      * @property {Object} stats - Contadores de KPI localizados logo no topo da dashboard.
@@ -202,7 +204,7 @@ const DashboardHome = () => {
                         <div>
                             <p className="text-sm font-medium text-slate-500 mb-1">Receita Recebida</p>
                             <h3 className="text-3xl font-bold text-slate-800">
-                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.totalRevenue)}
+                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: settings.currency || 'BRL' }).format(stats.totalRevenue)}
                             </h3>
                         </div>
                         <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl shadow-inner">
@@ -221,7 +223,7 @@ const DashboardHome = () => {
                         <div>
                             <p className="text-sm font-medium text-slate-500 mb-1">Valores a Receber</p>
                             <h3 className="text-3xl font-bold text-slate-800">
-                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.pendingRevenue)}
+                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: settings.currency || 'BRL' }).format(stats.pendingRevenue)}
                             </h3>
                         </div>
                         <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center text-xl shadow-inner">

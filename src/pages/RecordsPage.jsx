@@ -7,6 +7,7 @@ import { FaHeartbeat, FaSearch, FaFilter, FaFileMedicalAlt, FaPrescriptionBottle
 import Select from 'react-select';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import { useSettings } from '../context/SettingsContext';
 
 const CLINICAL_TEMPLATES = [
     { label: "Checkup Padrão", text: "Paciente comparece para checkup de rotina. Nega queixas agudas.\n\nPA: 120/80 mmHg\nFC: 75 bpm\n\nConduta: Solicitados exames laboratoriais de rotina." },
@@ -23,6 +24,7 @@ const PRESCRIPTION_TEMPLATES = [
 
 
 const RecordsPage = () => {
+    const { settings } = useSettings();
     /**
      * Listas de Componentes Globais (Cross-Component Data)
      * Numa aplicação Enterprise (maior), essas listas normalmente iriam pra um estado Global (Redux/Zustand) ou cache (React Query).
@@ -546,7 +548,7 @@ const RecordsPage = () => {
                                                 <div id={`pdf-template-${r.id}`} style={{ display: 'none', width: '800px', padding: '40px', backgroundColor: 'white', fontFamily: 'sans-serif', color: '#333' }}>
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #6c5be4', paddingBottom: '20px', marginBottom: '20px' }}>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                            <div style={{ color: '#6c5be4', fontSize: '28px', fontWeight: 'bold' }}>Sisagenda</div>
+                                                            <div style={{ color: '#6c5be4', fontSize: '28px', fontWeight: 'bold' }}>{settings.company_name || 'Sisagenda'}</div>
                                                             <div style={{ fontSize: '14px', color: '#666', borderLeft: '1px solid #ddd', paddingLeft: '10px', marginLeft: '10px' }}>Centro Clínico<br />Avançado</div>
                                                         </div>
                                                         <div style={{ textAlign: 'right', fontSize: '12px', color: '#666' }}>
