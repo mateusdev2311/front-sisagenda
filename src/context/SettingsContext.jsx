@@ -14,6 +14,12 @@ export const SettingsProvider = ({ children }) => {
     const [loadingSettings, setLoadingSettings] = useState(true);
 
     useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            setLoadingSettings(false);
+            return;
+        }
+
         axios.get('/system-settings')
             .then(res => {
                 // Aceita array (pega o primeiro) ou objeto direto
