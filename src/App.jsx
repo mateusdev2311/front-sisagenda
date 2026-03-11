@@ -10,12 +10,19 @@ import SchedulesPage from './pages/SchedulesPage';
 import RecordsPage from './pages/RecordsPage';
 import FinancialPage from './pages/FinancialPage';
 import SettingsPage from './pages/SettingsPage';
+import AdminCompaniesPage from './pages/AdminCompaniesPage';
 import './index.css';
 import './api/axiosConfig';
 
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem('token');
   return token ? children : <Navigate to="/login" replace />;
+};
+
+const SuperAdminRoute = ({ children }) => {
+  const userString = localStorage.getItem('user');
+  const user = userString ? JSON.parse(userString) : {};
+  return user.is_super_admin ? children : <Navigate to="/home" replace />;
 };
 
 function App() {
@@ -38,6 +45,7 @@ function App() {
           <Route path="/records" element={<RecordsPage />} />
           <Route path="/financial" element={<FinancialPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/admin/clinicas" element={<SuperAdminRoute><AdminCompaniesPage /></SuperAdminRoute>} />
         </Route>
 
         {/* Fallback */}

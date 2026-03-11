@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { FaHeartbeat, FaTachometerAlt, FaUsers, FaUserMd, FaUserInjured, FaCalendarAlt, FaFileMedicalAlt, FaCog } from 'react-icons/fa';
+import { FaHeartbeat, FaTachometerAlt, FaUsers, FaUserMd, FaUserInjured, FaCalendarAlt, FaFileMedicalAlt, FaCog, FaBuilding } from 'react-icons/fa';
 
 const Sidebar = () => {
 
@@ -10,6 +10,10 @@ const Sidebar = () => {
         }`;
 
     const titleClass = "text-xs font-bold text-slate-400 uppercase tracking-wider mt-6 mb-2 px-4";
+
+    const userString = localStorage.getItem('user');
+    const user = userString ? JSON.parse(userString) : {};
+    const isSuperAdmin = user.is_super_admin === true;
 
     return (
         <aside className="w-72 bg-slate-50 border-r border-slate-200 h-full flex flex-col hidden md:flex transition-colors duration-300">
@@ -30,41 +34,56 @@ const Sidebar = () => {
                         </NavLink>
                     </li>
 
-                    <li className={titleClass}>Gerenciamento</li>
-                    <li>
-                        <NavLink to="/users" className={linkClass}>
-                            <FaUsers className="text-lg opacity-80" /> <span>Usuários do Sistema</span>
-                        </NavLink>
-                    </li>
-                    <li>
-                        <NavLink to="/doctors" className={linkClass}>
-                            <FaUserMd className="text-lg opacity-80" /> <span>Equipe Médica</span>
-                        </NavLink>
-                    </li>
+                    {isSuperAdmin && (
+                        <>
+                            <li className={titleClass}>Gestão SaaS</li>
+                            <li>
+                                <NavLink to="/admin/clinicas" className={linkClass}>
+                                    <FaBuilding className="text-lg opacity-80" /> <span>Clínicas Cadastradas</span>
+                                </NavLink>
+                            </li>
+                        </>
+                    )}
 
-                    <li className={titleClass}>Operações</li>
-                    <li>
-                        <NavLink to="/patients" className={linkClass}>
-                            <FaUserInjured className="text-lg opacity-80" /> <span>Registro de Pacientes</span>
-                        </NavLink>
-                    </li>
-                    <li>
-                        <NavLink to="/schedules" className={linkClass}>
-                            <FaCalendarAlt className="text-lg opacity-80" /> <span>Agendamentos</span>
-                        </NavLink>
-                    </li>
-                    <li>
-                        <NavLink to="/records" className={linkClass}>
-                            <FaFileMedicalAlt className="text-lg opacity-80" /> <span>Prontuários Clínicos</span>
-                        </NavLink>
-                    </li>
+                    {!isSuperAdmin && (
+                        <>
+                            <li className={titleClass}>Gerenciamento</li>
+                            <li>
+                                <NavLink to="/users" className={linkClass}>
+                                    <FaUsers className="text-lg opacity-80" /> <span>Usuários do Sistema</span>
+                                </NavLink>
+                            </li>
+                            <li>
+                                <NavLink to="/doctors" className={linkClass}>
+                                    <FaUserMd className="text-lg opacity-80" /> <span>Equipe Médica</span>
+                                </NavLink>
+                            </li>
 
-                    <li className={titleClass}>Financeiro</li>
-                    <li>
-                        <NavLink to="/financial" className={linkClass}>
-                            <FaHeartbeat className="text-lg opacity-80" /> <span>Faturamento</span>
-                        </NavLink>
-                    </li>
+                            <li className={titleClass}>Operações</li>
+                            <li>
+                                <NavLink to="/patients" className={linkClass}>
+                                    <FaUserInjured className="text-lg opacity-80" /> <span>Registro de Pacientes</span>
+                                </NavLink>
+                            </li>
+                            <li>
+                                <NavLink to="/schedules" className={linkClass}>
+                                    <FaCalendarAlt className="text-lg opacity-80" /> <span>Agendamentos</span>
+                                </NavLink>
+                            </li>
+                            <li>
+                                <NavLink to="/records" className={linkClass}>
+                                    <FaFileMedicalAlt className="text-lg opacity-80" /> <span>Prontuários Clínicos</span>
+                                </NavLink>
+                            </li>
+
+                            <li className={titleClass}>Financeiro</li>
+                            <li>
+                                <NavLink to="/financial" className={linkClass}>
+                                    <FaHeartbeat className="text-lg opacity-80" /> <span>Faturamento</span>
+                                </NavLink>
+                            </li>
+                        </>
+                    )}
 
                     <li className={titleClass}>Configurações</li>
                     <li>
