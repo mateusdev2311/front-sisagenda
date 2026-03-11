@@ -235,11 +235,7 @@ const SchedulesPage = () => {
                             const newPatRes = await axios.post('/patients', {
                                 name: newPatientData.name,
                                 number: newPatientData.number,
-                                cpf: newPatientData.cpf,
-                                // Envia uns defaults pro backend não chorar:
-                                email: `${newPatientData.number.replace(/\D/g, '')}@sisagenda.com`, 
-                                birth_date: '2000-01-01',
-                                gender: 'Other'
+                                cpf: newPatientData.cpf ? newPatientData.cpf : null
                             });
                             activePatientId = newPatRes.data?.id;
                             
