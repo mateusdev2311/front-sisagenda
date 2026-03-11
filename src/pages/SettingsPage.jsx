@@ -127,15 +127,28 @@ const SettingsPage = () => {
         }
         setIsTesting(true);
         try {
-            await axios.post(`https://${integration.base_url}/int/enqueueMessageToSend`, {
-                queueId: Number(integration.queue_id),
-                apiKey: integration.api_key,
-                number: testPhone,
-                text: '✅ Teste de integração Sisagenda - mensagem enviada com sucesso!',
+            // Usando fetch nativo para evitar interceptor do axios que desloga no 401
+            const response = await fetch(`https://${integration.base_url}/int/enqueueMessageToSend`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    queueId: Number(integration.queue_id),
+                    apiKey: integration.api_key,
+                    number: testPhone,
+                    text: '✅ Teste de integração Sisagenda - mensagem enviada com sucesso!'
+                })
             });
+
+            if (!response.ok) {
+                // Se o Kentro retornar erro (ex: 401, 403, 500) cai aqui ao invés do interceptor
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
             toast.success('Mensagem de teste enviada!');
         } catch (err) {
-            console.error(err);
+            console.error('Kentro test error:', err);
             toast.error('Falha no disparo. Verifique as credenciais.');
         } finally {
             setIsTesting(false);
