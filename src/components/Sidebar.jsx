@@ -27,12 +27,7 @@ const Sidebar = () => {
 
             <nav className="flex-1 overflow-y-auto px-4 py-6 custom-scrollbar">
                 <ul className="space-y-1">
-                    <li className={titleClass}>Visão Geral</li>
-                    <li>
-                        <NavLink to="/home" className={linkClass}>
-                            <FaTachometerAlt className="text-lg opacity-80" /> <span>Dashboard</span>
-                        </NavLink>
-                    </li>
+
 
                     {isSuperAdmin && (
                         <>
@@ -47,6 +42,13 @@ const Sidebar = () => {
 
                     {!isSuperAdmin && (
                         <>
+                            <li className={titleClass}>Visão Geral</li>
+                            <li>
+                                <NavLink to="/home" className={linkClass}>
+                                    <FaTachometerAlt className="text-lg opacity-80" /> <span>Dashboard</span>
+                                </NavLink>
+                            </li>
+
                             <li className={titleClass}>Gerenciamento</li>
                             <li>
                                 <NavLink to="/users" className={linkClass}>

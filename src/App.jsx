@@ -25,6 +25,12 @@ const SuperAdminRoute = ({ children }) => {
   return user.is_super_admin ? children : <Navigate to="/home" replace />;
 };
 
+const RoleBasedRedirect = () => {
+  const userString = localStorage.getItem('user');
+  const user = userString ? JSON.parse(userString) : {};
+  return user.is_super_admin ? <Navigate to="/admin/clinicas" replace /> : <Navigate to="/home" replace />;
+};
+
 function App() {
   return (
     <Router>
@@ -36,7 +42,7 @@ function App() {
 
         {/* Protected Dashboard Routes */}
         <Route element={<PrivateRoute><DashboardLayout /></PrivateRoute>}>
-          <Route path="/" element={<Navigate to="/home" replace />} />
+          <Route path="/" element={<RoleBasedRedirect />} />
           <Route path="/home" element={<DashboardHome />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/doctors" element={<DoctorsPage />} />
