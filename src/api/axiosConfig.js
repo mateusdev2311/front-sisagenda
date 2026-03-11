@@ -8,8 +8,7 @@ import axios from 'axios';
  * 1. Checks standard Vite environment variables for the API URL, falling back to localhost:3333.
  * 2. Injects the Bearer JWT token into the headers of EVERY outgoing request automatically.
  * 3. Catches all incoming responses and acts upon them (e.g., auto-logout if token is expired).
- */
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://18.217.222.103:3333';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://users-postgres.onrender.com';
 
 axios.defaults.baseURL = API_BASE_URL;
 
