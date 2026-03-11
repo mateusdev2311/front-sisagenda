@@ -264,7 +264,7 @@ const SchedulesPage = () => {
                             // Busca o paciente diretamente na API para garantir o contato mais atualizado
                             const patientRes = await axios.get(`/patients/${formData.patient_id}`);
                             const patient = patientRes.data;
-                            const rawPhone = patient?.number; // Campo 'number' do modelo de paciente
+                            const rawPhone = patient?.number || patient?.phone; // Busca property number ou phone
                             if (rawPhone) {
                                 // Remove tudo que não é dígito e adiciona DDI 55 se não tiver
                                 const digits = rawPhone.replace(/\D/g, '');
