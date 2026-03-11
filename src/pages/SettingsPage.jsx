@@ -97,6 +97,7 @@ const SettingsPage = () => {
         setIsSavingIntegration(true);
         try {
             const payload = {
+                name: 'Kentro',
                 base_url: integration.base_url,
                 api_key: integration.api_key,
                 queue_id: Number(integration.queue_id),
