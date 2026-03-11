@@ -190,8 +190,37 @@ const SchedulesPage = () => {
      *   "date": string // Formato definido pelo input datetime-local (ex: "2023-10-31T14:30")
      * }
      */
+    const [isCreatingPatient, setIsCreatingPatient] = useState(false);
+    const [newPatientData, setNewPatientData] = useState({ name: '', number: '', cpf: '' });
+
+    // Modificando handleOpenCreate para limpar também o novo estado
+    const handleOpenCreateLocal = () => {
+        setIsCreatingPatient(false);
+        setNewPatientData({ name: '', number: '', cpf: '' });
+        handleOpenCreate();
+    };
+
+    const handleOpenEditLocal = (app) => {
+        setIsCreatingPatient(false);
+        handleOpenEdit(app);
+    };
+
+// Ajuste rápido dentro da renderização:
+// PULAR PARA A SUBMISSÃO:
+
     const handleSubmit = (e) => {
         e.preventDefault();
+        
+        if (isCreatingPatient && (!newPatientData.name || !newPatientData.number)) {
+            toast.error('Preencha ao menos Nome e Celular do novo paciente.');
+            return;
+        }
+
+        if (!isCreatingPatient && !formData.patient_id) {
+            toast.error('Selecione ou cadastre um paciente.');
+            return;
+        }
+
         setConfirmDialog({
             isOpen: true,
             title: editingId ? 'Confirmar Reagendamento' : 'Confirmar Agendamento',
@@ -199,6 +228,32 @@ const SchedulesPage = () => {
             type: 'primary',
             onConfirm: async () => {
                 try {
+                    // SE ESTIVER CRIANDO O PACIENTE, FAZ ISSO PRIMEIRO:
+                    let activePatientId = formData.patient_id;
+                    if (isCreatingPatient) {
+                        try {
+                            const newPatRes = await axios.post('/patients', {
+                                name: newPatientData.name,
+                                number: newPatientData.number,
+                                cpf: newPatientData.cpf,
+                                // Envia uns defaults pro backend não chorar:
+                                email: `${newPatientData.number.replace(/\D/g, '')}@sisagenda.com`, 
+                                birth_date: '2000-01-01',
+                                gender: 'Other'
+                            });
+                            activePatientId = newPatRes.data?.id;
+                            
+                            // Adiciona na lista local para não ter que recarregar a tela inteira pra aparecer o nome
+                            setPatients(prev => [...prev, newPatRes.data]);
+                            toast.success('Paciente cadastrado rapidamente!');
+                        } catch (err) {
+                            alert(err.response?.data?.error || err.response?.data?.message || 'Erro ao cadastrar paciente.');
+                            setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                            return; // Para a execução do agendamento se o paciente falhar
+                        }
+                    }
+
+                    // CONTINUA O FLUXO NORMAL DE AGENDAMENTO
                     let finalDateStr = formData.date;
                     if (!finalDateStr.includes('T')) {
                         finalDateStr = `${finalDateStr}T08:00`;
@@ -226,14 +281,14 @@ const SchedulesPage = () => {
                     if (editingId) {
                         await axios.put(`/appointments/${editingId}`, {
                             doctor_id: Number(formData.doctor_id),
-                            patient_id: Number(formData.patient_id),
+                            patient_id: Number(activePatientId),
                             date: finalDateStr,
                             notes: formData.notes
                         });
                     } else {
                         const postRes = await axios.post('/appointments', {
                             doctor_id: Number(formData.doctor_id),
-                            patient_id: Number(formData.patient_id),
+                            patient_id: Number(activePatientId),
                             date: finalDateStr,
                             notes: formData.notes
                         });
@@ -247,7 +302,7 @@ const SchedulesPage = () => {
                             const dueDate = new Date(formData.date).toISOString().split('T')[0]; // Mesma data da consulta
                             await axios.post('/billing', {
                                 appointmentId: Number(savedApptId),
-                                patientId: Number(formData.patient_id),
+                                patientId: Number(activePatientId),
                                 value: parseFloat(formData.billingValue),
                                 status: 'Pendente', // Forced as 'Pendente' by user choice
                                 dueDate: dueDate,
@@ -262,7 +317,7 @@ const SchedulesPage = () => {
                     if (formData.notifyWhatsapp && kentroConfig) {
                         try {
                             // Busca o paciente diretamente na API para garantir o contato mais atualizado
-                            const patientRes = await axios.get(`/patients/${formData.patient_id}`);
+                            const patientRes = await axios.get(`/patients/${activePatientId}`);
                             const patient = patientRes.data;
                             const rawPhone = patient?.number || patient?.phone; // Busca property number ou phone
                             if (rawPhone) {
@@ -335,7 +390,7 @@ const SchedulesPage = () => {
                 </div>
 
                 <div className="flex items-center gap-4 bg-white dark:bg-slate-800 px-2 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
-                    <button className="btn-primary py-1.5" onClick={handleOpenCreate}>
+                    <button className="btn-primary py-1.5" onClick={handleOpenCreateLocal}>
                         <FaPlus className="text-sm" /> Nova Consulta
                     </button>
                 </div>
@@ -364,7 +419,7 @@ const SchedulesPage = () => {
                         day: "Dia",
                         agenda: "Lista"
                     }}
-                    onSelectEvent={(event) => handleOpenEdit(event.resource)}
+                    onSelectEvent={(event) => handleOpenEditLocal(event.resource)}
                     eventPropGetter={eventPropGetter}
                     components={{
                         toolbar: (toolbarProps) => (
@@ -409,30 +464,61 @@ const SchedulesPage = () => {
                             {doctors.map(d => <option key={d.id} value={d.id}>Dr. {d.name} ({d.specialty})</option>)}
                         </select>
                     </div>
-                    <div>
-                        <label>Registro do Paciente</label>
-                        <Select
-                            options={patients.map(p => ({ value: p.id, label: p.name }))}
-                            value={formData.patient_id ? { value: formData.patient_id, label: patients.find(p => p.id === formData.patient_id)?.name } : null}
-                            onChange={(selected) => setFormData({ ...formData, patient_id: selected ? selected.value : '' })}
-                            placeholder="Pesquise pelo nome do paciente..."
-                            className="text-sm font-medium"
-                            classNamePrefix="react-select"
-                            styles={{
-                                control: (base) => ({
-                                    ...base,
-                                    borderColor: '#e2e8f0',
-                                    borderRadius: '0.5rem',
-                                    padding: '2px',
-                                    boxShadow: 'none',
-                                    '&:hover': {
-                                        borderColor: '#6366f1'
-                                    }
-                                })
-                            }}
-                            isClearable
-                            required
-                        />
+
+                    <div className="p-4 border border-slate-200 bg-slate-50 rounded-xl relative">
+                        <div className="flex items-center justify-between mb-3">
+                            <label className="text-slate-700 font-bold mb-0">Registro do Paciente</label>
+                            
+                            {!editingId && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsCreatingPatient(!isCreatingPatient);
+                                        setFormData({ ...formData, patient_id: '' });
+                                        setNewPatientData({ name: '', number: '', cpf: '' });
+                                    }}
+                                    className="text-xs font-bold text-primary hover:text-primary-dark transition-colors flex items-center gap-1 bg-primary/10 px-2 py-1 rounded"
+                                >
+                                    <FaPlus className="text-[10px]" /> {isCreatingPatient ? 'Usar paciente existente' : 'Cadastrar novo na hora'}
+                                </button>
+                            )}
+                        </div>
+
+                        {isCreatingPatient ? (
+                            <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                                <p className="text-xs text-slate-500 italic mb-2">Preencha os dados básicos. O paciente será salvo no banco de dados antes da consulta.</p>
+                                <div>
+                                    <input type="text" className="form-control py-2 text-sm" placeholder="Nome Completo do Paciente" required={isCreatingPatient} value={newPatientData.name} onChange={e => setNewPatientData({ ...newPatientData, name: e.target.value })} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <input type="tel" className="form-control py-2 text-sm" placeholder="Celular/WhatsApp (Ex: 11988888888)" required={isCreatingPatient} value={newPatientData.number} onChange={e => setNewPatientData({ ...newPatientData, number: e.target.value })} />
+                                    <input type="text" className="form-control py-2 text-sm" placeholder="CPF (Opcional)" value={newPatientData.cpf} onChange={e => setNewPatientData({ ...newPatientData, cpf: e.target.value })} />
+                                </div>
+                            </div>
+                        ) : (
+                            <Select
+                                options={patients.map(p => ({ value: p.id, label: p.name }))}
+                                value={formData.patient_id ? { value: formData.patient_id, label: patients.find(p => p.id === formData.patient_id)?.name } : null}
+                                onChange={(selected) => setFormData({ ...formData, patient_id: selected ? selected.value : '' })}
+                                placeholder="Pesquise pelo nome do paciente..."
+                                className="text-sm font-medium"
+                                classNamePrefix="react-select"
+                                styles={{
+                                    control: (base) => ({
+                                        ...base,
+                                        borderColor: '#e2e8f0',
+                                        borderRadius: '0.5rem',
+                                        padding: '2px',
+                                        boxShadow: 'none',
+                                        '&:hover': {
+                                            borderColor: '#6366f1'
+                                        }
+                                    })
+                                }}
+                                isClearable
+                                required={!isCreatingPatient}
+                            />
+                        )}
                     </div>
                     <div>
                         <label>Motivo da Consulta / Observações (Opcional)</label>
