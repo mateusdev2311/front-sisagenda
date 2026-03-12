@@ -22,7 +22,7 @@ const Sidebar = () => {
                 <img
                     src="/logo_sisagenda-removebg-preview.png"
                     alt="Sisagenda"
-                    className="h-12 object-contain"
+                    className="h-16 w-auto object-contain"
                 />
             </div>
 
