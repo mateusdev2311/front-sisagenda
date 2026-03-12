@@ -19,10 +19,11 @@ const Sidebar = () => {
         <aside className="w-72 bg-slate-50 border-r border-slate-200 h-full flex flex-col hidden md:flex transition-colors duration-300">
 
             <div className="h-20 flex items-center px-6 border-b border-slate-200 transition-colors">
-                <div className="flex items-center gap-3 text-2xl font-bold text-primary">
-                    <FaHeartbeat className="text-3xl" />
-                    <span className="tracking-tight">Sisagenda</span>
-                </div>
+                <img
+                    src="/logo_sisagenda-removebg-preview.png"
+                    alt="Sisagenda"
+                    className="h-12 object-contain"
+                />
             </div>
 
             <nav className="flex-1 overflow-y-auto px-4 py-6 custom-scrollbar">
