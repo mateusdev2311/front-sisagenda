@@ -40,16 +40,17 @@ const LoginPage = () => {
 
     return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 w-full max-w-md p-8 relative overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 w-full max-w-md p-6 relative overflow-hidden">
                 {/* Decorative background element */}
                 <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary via-fuchsia-500 to-primary"></div>
 
-                <div className="text-center mb-10 mt-4">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary-light text-primary text-3xl mb-4 shadow-inner">
-                        <FaHeartbeat />
-                    </div>
-                    <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Bem-vindo de volta</h2>
-                    <p className="text-slate-500 mt-1 text-sm">Acesse sua conta do Sisagenda</p>
+                <div className="text-center mb-5 mt-2">
+                    <img
+                        src="/logo_sisagenda-removebg-preview.png"
+                        alt="Sisagenda"
+                        className="h-16 w-auto object-contain mx-auto mb-2"
+                    />
+                    <p className="text-slate-500 text-sm">Acesse sua conta do Sisagenda</p>
                 </div>
 
                 {error && (
@@ -59,7 +60,7 @@ const LoginPage = () => {
                     </div>
                 )}
 
-                <form onSubmit={handleLogin} className="space-y-6">
+                <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-1">
                         <label className="text-sm font-semibold text-slate-700" htmlFor="email">Endereço de E-mail</label>
                         <div className="relative">
@@ -123,7 +124,7 @@ const LoginPage = () => {
                     </button>
                 </form>
 
-                <div className="mt-8 text-center text-sm text-slate-500">
+                <div className="mt-5 text-center text-sm text-slate-500">
                     <p>Não possui uma conta? <a href="https://wa.me/5538988178623" className="font-medium text-primary hover:text-primary-dark hover:underline">Contate o Administrador</a></p>
                 </div>
             </div>
