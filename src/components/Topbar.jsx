@@ -6,7 +6,6 @@ import { useNavigate } from 'react-router-dom';
 const Topbar = () => {
     const [notifOpen, setNotifOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
     const [userData, setUserData] = useState({ name: 'Usuário', email: '', role: 'Membro' });
     const navigate = useNavigate();
 
@@ -56,36 +55,16 @@ const Topbar = () => {
         window.location.href = '/login';
     };
 
-    const handleSearch = (e) => {
-        if (e.key === 'Enter' && searchQuery.trim() !== '') {
-            // Em aplicação real isso chamaria a rota /search global da API
-            alert(`Pesquisando por: ${searchQuery}`);
-            navigate(`/patients?search=${encodeURIComponent(searchQuery)}`);
-            setSearchQuery('');
-        }
-    };
-
     return (
         <header className="h-20 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 flex items-center justify-between shadow-sm z-10 sticky top-0 transition-colors duration-200">
 
-            {/* Mobile Toggle & Search */}
+            {/* Mobile Toggle & Logo Space */}
             <div className="flex items-center gap-4 flex-1">
                 <button className="md:hidden text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-primary-light p-2">
                     <FaBars className="text-xl" />
                 </button>
-
-                <div className="relative hidden sm:block max-w-md w-full">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <FaSearch className="text-slate-400" />
-                    </div>
-                    <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={handleSearch}
-                        className="block w-full pl-10 pr-3 py-2 border border-slate-200 dark:border-slate-600 rounded-full leading-5 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all sm:text-sm"
-                        placeholder="Pesquisar pacientes ou médicos... (Pressione Enter)"
-                    />
+                <div className="hidden sm:block text-slate-800 dark:text-slate-200 font-semibold text-lg">
+                    {/* Pode adicionar um breadcrumb ou título aqui futuramente */}
                 </div>
             </div>
 

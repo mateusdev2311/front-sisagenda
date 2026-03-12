@@ -3,7 +3,7 @@ import axios from '../api/axiosConfig';
 import toast from 'react-hot-toast';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
-import { FaPlus, FaEye, FaTrash, FaUserInjured, FaPhone, FaEnvelope, FaEdit, FaFileUpload, FaFilePdf, FaDownload } from 'react-icons/fa';
+import { FaPlus, FaEye, FaTrash, FaUserInjured, FaPhone, FaEnvelope, FaEdit, FaFileUpload, FaFilePdf, FaDownload, FaSearch } from 'react-icons/fa';
 
 const PatientsPage = () => {
     /**
@@ -22,6 +22,7 @@ const PatientsPage = () => {
     const [formData, setFormData] = useState({ name: '', email: '', cpf: '', number: '', birth_date: '', gender: 'Male', address: '', city: '', state: '', zip_code: '' });
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', type: 'primary', onConfirm: null });
     const [isLoading, setIsLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
 
     // Premium Feature: Patient Document Uploads
     const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'documents'
@@ -225,6 +226,12 @@ const PatientsPage = () => {
         return 'bg-slate-100 text-slate-600 border-slate-200';
     };
 
+    const filteredPatients = patients.filter(p =>
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.email && p.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (p.cpf && p.cpf.includes(searchTerm))
+    );
+
     return (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 fade-in">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
@@ -232,9 +239,23 @@ const PatientsPage = () => {
                     <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Registro de Pacientes</h2>
                     <p className="text-sm text-slate-500 mt-1">Gerencie os dados demográficos e informações de contato.</p>
                 </div>
-                <button className="btn-primary" onClick={handleOpenCreate}>
-                    <FaPlus className="text-sm" /> Novo Paciente
-                </button>
+                <div className="flex items-center gap-3">
+                    <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <FaSearch className="text-slate-400 text-sm" />
+                        </div>
+                        <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                            className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                            placeholder="Buscar por nome, e-mail ou CPF..."
+                        />
+                    </div>
+                    <button className="btn-primary" onClick={handleOpenCreate}>
+                        <FaPlus className="text-sm" /> Novo Paciente
+                    </button>
+                </div>
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm shadow-slate-200/50 border border-slate-100 overflow-hidden">
@@ -280,7 +301,7 @@ const PatientsPage = () => {
                                         </td>
                                     </tr>
                                 ))
-                            ) : patients.map((p) => {
+                            ) : filteredPatients.map((p) => {
                                 const age = p.birth_date ? new Date().getFullYear() - new Date(p.birth_date).getFullYear() : 'N/A';
                                 return (
                                     <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group">
@@ -327,12 +348,12 @@ const PatientsPage = () => {
                                     </tr>
                                 )
                             })}
-                            {!isLoading && patients.length === 0 && (
+                            {!isLoading && filteredPatients.length === 0 && (
                                 <tr>
                                     <td colSpan="4" className="px-6 py-12 text-center text-slate-500">
                                         <div className="flex flex-col items-center justify-center">
                                             <FaUserInjured className="text-4xl text-slate-300 mb-3" />
-                                            <p>Nenhum paciente encontrado no registro.</p>
+                                            <p>{searchTerm ? 'Nenhum paciente encontrado para esta busca.' : 'Nenhum paciente encontrado no registro.'}</p>
                                         </div>
                                     </td>
                                 </tr>

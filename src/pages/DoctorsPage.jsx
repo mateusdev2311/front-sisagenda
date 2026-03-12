@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from '../api/axiosConfig';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
-import { FaPlus, FaEye, FaTrash, FaUserMd, FaEdit, FaCalendarAlt } from 'react-icons/fa';
+import { FaPlus, FaEye, FaTrash, FaUserMd, FaEdit, FaCalendarAlt, FaSearch } from 'react-icons/fa';
 
 const DoctorsPage = () => {
     /**
@@ -20,6 +20,7 @@ const DoctorsPage = () => {
     const [editingId, setEditingId] = useState(null);
     const [formData, setFormData] = useState({ name: '', email: '', crm: '', specialty: '', color: '#6c5be4', bio: '' });
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', type: 'primary', onConfirm: null });
+    const [searchTerm, setSearchTerm] = useState('');
 
     // Schedule Management State
     const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
@@ -245,6 +246,12 @@ const DoctorsPage = () => {
         });
     };
 
+    const filteredDoctors = doctors.filter(d =>
+        d.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        d.specialty.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        d.crm.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     return (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 fade-in">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
@@ -252,9 +259,23 @@ const DoctorsPage = () => {
                     <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Equipe Médica</h2>
                     <p className="text-sm text-slate-500 mt-1">Gerencie médicos, especialidades e cores de agendamento.</p>
                 </div>
-                <button className="btn-primary" onClick={handleOpenCreate}>
-                    <FaPlus className="text-sm" /> Novo Médico
-                </button>
+                <div className="flex items-center gap-3">
+                    <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <FaSearch className="text-slate-400 text-sm" />
+                        </div>
+                        <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                            className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                            placeholder="Buscar por nome, especialidade ou CRM..."
+                        />
+                    </div>
+                    <button className="btn-primary" onClick={handleOpenCreate}>
+                        <FaPlus className="text-sm" /> Novo Médico
+                    </button>
+                </div>
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm shadow-slate-200/50 border border-slate-100 overflow-hidden">
@@ -270,7 +291,7 @@ const DoctorsPage = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {doctors.map((d) => (
+                            {filteredDoctors.map((d) => (
                                 <tr key={d.id} className="hover:bg-slate-50/50 transition-colors group">
                                     <td className="px-6 py-4 relative">
                                         <div className="absolute inset-y-0 left-0 w-1 rounded-r-md" style={{ backgroundColor: d.color }}></div>
@@ -310,12 +331,12 @@ const DoctorsPage = () => {
                                     </td>
                                 </tr>
                             ))}
-                            {doctors.length === 0 && (
+                            {filteredDoctors.length === 0 && (
                                 <tr>
                                     <td colSpan="5" className="px-6 py-12 text-center text-slate-500">
                                         <div className="flex flex-col items-center justify-center">
                                             <FaUserMd className="text-4xl text-slate-300 mb-3" />
-                                            <p>Nenhum médico encontrado no diretório.</p>
+                                            <p>{searchTerm ? 'Nenhum médico encontrado para esta busca.' : 'Nenhum médico encontrado no diretório.'}</p>
                                         </div>
                                     </td>
                                 </tr>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from '../api/axiosConfig';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
-import { FaPlus, FaEye, FaTrash, FaBuilding, FaUserTie } from 'react-icons/fa';
+import { FaPlus, FaEye, FaTrash, FaBuilding, FaUserTie, FaSearch } from 'react-icons/fa';
 
 const AdminCompaniesPage = () => {
     const [companies, setCompanies] = useState([]);
@@ -11,6 +11,7 @@ const AdminCompaniesPage = () => {
     const [currentCompany, setCurrentCompany] = useState(null);
     const [formData, setFormData] = useState({ name: '', admin_name: '', admin_email: '', admin_password: '' });
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', type: 'primary', onConfirm: null });
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         fetchCompanies();
@@ -101,6 +102,10 @@ const AdminCompaniesPage = () => {
         });
     };
 
+    const filteredCompanies = companies.filter(c =>
+        c.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     return (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 fade-in">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
@@ -108,9 +113,23 @@ const AdminCompaniesPage = () => {
                     <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Gestão de Clínicas (SaaS)</h2>
                     <p className="text-sm text-slate-500 mt-1">Gerencie os tenants, clínicas e assinantes da plataforma.</p>
                 </div>
-                <button className="btn-primary" onClick={handleOpenCreate}>
-                    <FaPlus className="text-sm" /> Nova Clínica
-                </button>
+                <div className="flex items-center gap-3">
+                    <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <FaSearch className="text-slate-400 text-sm" />
+                        </div>
+                        <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                            className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                            placeholder="Buscar clínica..."
+                        />
+                    </div>
+                    <button className="btn-primary" onClick={handleOpenCreate}>
+                        <FaPlus className="text-sm" /> Nova Clínica
+                    </button>
+                </div>
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm shadow-slate-200/50 border border-slate-100 overflow-hidden">
@@ -125,7 +144,7 @@ const AdminCompaniesPage = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {companies.map((c) => (
+                            {filteredCompanies.map((c) => (
                                 <tr key={c.id} className="hover:bg-slate-50/50 transition-colors group">
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center gap-3">
@@ -166,12 +185,12 @@ const AdminCompaniesPage = () => {
                                     </td>
                                 </tr>
                             ))}
-                            {companies.length === 0 && (
+                            {filteredCompanies.length === 0 && (
                                 <tr>
                                     <td colSpan="4" className="px-6 py-12 text-center text-slate-500">
                                         <div className="flex flex-col items-center justify-center">
                                             <FaBuilding className="text-4xl text-slate-300 mb-3" />
-                                            <p>Nenhuma clínica cadastrada na plataforma SaaS.</p>
+                                            <p>{searchTerm ? 'Nenhuma clínica encontrada para esta busca.' : 'Nenhuma clínica cadastrada na plataforma SaaS.'}</p>
                                         </div>
                                     </td>
                                 </tr>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from '../api/axiosConfig';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
-import { FaPlus, FaEye, FaTrash, FaUserShield, FaUser, FaEdit } from 'react-icons/fa';
+import { FaPlus, FaEye, FaTrash, FaUserShield, FaUser, FaEdit, FaSearch } from 'react-icons/fa';
 
 const UsersPage = () => {
     /**
@@ -20,6 +20,7 @@ const UsersPage = () => {
     const [editingId, setEditingId] = useState(null);
     const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'USER' });
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', type: 'primary', onConfirm: null });
+    const [searchTerm, setSearchTerm] = useState('');
 
     /**
      * Busca as contas de usuário do sistema assim que a tela carrega.
@@ -132,6 +133,11 @@ const UsersPage = () => {
         });
     };
 
+    const filteredUsers = users.filter(u =>
+        u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     return (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 fade-in">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
@@ -139,9 +145,23 @@ const UsersPage = () => {
                     <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Usuários do Sistema</h2>
                     <p className="text-sm text-slate-500 mt-1">Gerencie administradores, suporte e recepcionistas.</p>
                 </div>
-                <button className="btn-primary" onClick={handleOpenCreate}>
-                    <FaPlus className="text-sm" /> Novo Usuário
-                </button>
+                <div className="flex items-center gap-3">
+                    <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <FaSearch className="text-slate-400 text-sm" />
+                        </div>
+                        <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                            className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                            placeholder="Buscar usuário..."
+                        />
+                    </div>
+                    <button className="btn-primary" onClick={handleOpenCreate}>
+                        <FaPlus className="text-sm" /> Novo Usuário
+                    </button>
+                </div>
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm shadow-slate-200/50 border border-slate-100 overflow-hidden">
@@ -156,7 +176,7 @@ const UsersPage = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {users.map((u) => (
+                            {filteredUsers.map((u) => (
                                 <tr key={u.id} className="hover:bg-slate-50/50 transition-colors group">
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center gap-3">
@@ -191,12 +211,12 @@ const UsersPage = () => {
                                     </td>
                                 </tr>
                             ))}
-                            {users.length === 0 && (
+                            {filteredUsers.length === 0 && (
                                 <tr>
                                     <td colSpan="4" className="px-6 py-12 text-center text-slate-500">
                                         <div className="flex flex-col items-center justify-center">
                                             <FaUserShield className="text-4xl text-slate-300 mb-3" />
-                                            <p>Nenhum usuário cadastrado no sistema.</p>
+                                            <p>{searchTerm ? 'Nenhum usuário encontrado para esta busca.' : 'Nenhum usuário cadastrado no sistema.'}</p>
                                         </div>
                                     </td>
                                 </tr>
