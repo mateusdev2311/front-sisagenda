@@ -18,11 +18,11 @@ const Sidebar = () => {
     return (
         <aside className="w-72 bg-slate-50 border-r border-slate-200 h-full flex flex-col hidden md:flex transition-colors duration-300">
 
-            <div className="h-20 flex items-center px-6 border-b border-slate-200 transition-colors">
+            <div className="h-36 flex items-center justify-center px-4 border-b border-slate-200 transition-colors">
                 <img
                     src="/logo_sisagenda-removebg-preview.png"
                     alt="Sisagenda"
-                    className="h-16 w-auto object-contain"
+                    className="h-32 w-auto object-contain"
                 />
             </div>
 
