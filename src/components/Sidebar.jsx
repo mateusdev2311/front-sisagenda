@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { FaHeartbeat, FaTachometerAlt, FaUsers, FaUserMd, FaUserInjured, FaCalendarAlt, FaFileMedicalAlt, FaCog, FaBuilding } from 'react-icons/fa';
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen, setIsOpen }) => {
 
     const linkClass = ({ isActive }) =>
         `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 mt-1 ${isActive
@@ -16,7 +16,7 @@ const Sidebar = () => {
     const isSuperAdmin = user.is_super_admin === true;
 
     return (
-        <aside className="w-72 bg-slate-50 border-r border-slate-200 h-full flex flex-col hidden md:flex transition-colors duration-300">
+        <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-slate-50 border-r border-slate-200 h-full flex flex-col transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0`}>
 
             <div className="h-20 flex items-center justify-center px-4 border-b border-slate-200 transition-colors overflow-hidden">
                 <img
@@ -26,7 +26,10 @@ const Sidebar = () => {
                 />
             </div>
 
-            <nav className="flex-1 overflow-y-auto px-4 py-6 custom-scrollbar">
+            <nav 
+              className="flex-1 overflow-y-auto px-4 py-6 custom-scrollbar"
+              onClick={() => window.innerWidth < 768 && setIsOpen(false)}
+            >
                 <ul className="space-y-1">
 
 

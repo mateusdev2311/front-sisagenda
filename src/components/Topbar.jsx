@@ -3,7 +3,7 @@ import { FaSearch, FaBell, FaChevronDown, FaKey, FaSignOutAlt, FaInfoCircle, FaC
 import { jwtDecode } from 'jwt-decode';
 import { useNavigate } from 'react-router-dom';
 
-const Topbar = () => {
+const Topbar = ({ toggleSidebar }) => {
     const [notifOpen, setNotifOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
     const [userData, setUserData] = useState({ name: 'Usuário', email: '', role: 'Membro' });
@@ -60,7 +60,10 @@ const Topbar = () => {
 
             {/* Mobile Toggle & Logo Space */}
             <div className="flex items-center gap-4 flex-1">
-                <button className="md:hidden text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-primary-light p-2">
+                <button 
+                  onClick={toggleSidebar}
+                  className="md:hidden text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-primary-light p-2"
+                >
                     <FaBars className="text-xl" />
                 </button>
                 <div className="hidden sm:block text-slate-800 dark:text-slate-200 font-semibold text-lg">
