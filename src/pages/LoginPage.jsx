@@ -48,7 +48,7 @@ const LoginPage = () => {
                     <img
                         src="/logo_sisagenda-removebg-preview.png"
                         alt="Sisagenda"
-                        className="h-16 w-auto object-contain mx-auto mb-2"
+                        className="h-24 w-auto object-contain mx-auto mb-2"
                     />
                     <p className="text-slate-500 text-sm">Acesse sua conta do Sisagenda</p>
                 </div>
