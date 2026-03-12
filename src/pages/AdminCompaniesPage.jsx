@@ -82,6 +82,25 @@ const AdminCompaniesPage = () => {
         });
     };
 
+    const handleToggleStatus = (company) => {
+        setConfirmDialog({
+            isOpen: true,
+            title: company.status ? 'Suspender Clínica' : 'Ativar Clínica',
+            message: `Tem certeza que deseja ${company.status ? 'suspender' : 'ativar'} o acesso desta clínica? ${company.status ? 'Os usuários vinculados não conseguirão mais fazer login.' : 'Os usuários voltarão a ter acesso normal ao sistema.'}`,
+            type: company.status ? 'warning' : 'success',
+            onConfirm: async () => {
+                try {
+                    await axios.put(`/companies/${company.id}`, { name: company.name, status: !company.status });
+                    setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                    fetchCompanies();
+                } catch (error) {
+                    console.error('Erro ao atualizar status', error);
+                    alert('Erro ao atualizar o status da clínica.');
+                }
+            }
+        });
+    };
+
     return (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 fade-in">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
@@ -120,9 +139,17 @@ const AdminCompaniesPage = () => {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-success/10 text-success">
-                                            Ativo
-                                        </span>
+                                        <button 
+                                            onClick={() => handleToggleStatus(c)}
+                                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold cursor-pointer transition-colors ${
+                                                c.status 
+                                                ? 'bg-success/10 text-success hover:bg-success/20' 
+                                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                            }`}
+                                            title={c.status ? "Clique para Suspender" : "Clique para Ativar"}
+                                        >
+                                            {c.status ? 'Ativo' : 'Suspenso'}
+                                        </button>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                                         {new Date(c.created_at || c.createdAt).toLocaleDateString()}
@@ -168,8 +195,8 @@ const AdminCompaniesPage = () => {
                                 <FaBuilding />
                             </div>
                             <h3 className="mt-4 text-xl font-bold text-slate-800 z-10">{currentCompany.name}</h3>
-                            <span className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide bg-success text-white">
-                                Ativo
+                            <span className={`mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${currentCompany.status ? 'bg-success text-white' : 'bg-slate-300 text-slate-700'}`}>
+                                {currentCompany.status ? 'Ativo' : 'Suspenso'}
                             </span>
                         </div>
                         <div className="bg-white border border-slate-100 rounded-xl divide-y divide-slate-100">
