@@ -23,7 +23,7 @@ const LoginPage = () => {
                 if (response.data.userReturn) {
                     localStorage.setItem('user', JSON.stringify(response.data.userReturn));
                 }
-                navigate('/home');
+                navigate('/');
             } else {
                 setError('Login failed: No token received.');
             }
