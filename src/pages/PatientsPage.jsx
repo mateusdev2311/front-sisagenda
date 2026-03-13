@@ -490,15 +490,15 @@ const PatientsPage = () => {
                             </div>
                             <div>
                                 <label>CPF</label>
-                                <input type="text" value={formData.cpf} onChange={e => setFormData({ ...formData, cpf: e.target.value })} required placeholder="000.000.000-00" />
+                                <input type="text" value={formData.cpf} onChange={e => setFormData({ ...formData, cpf: e.target.value })} placeholder="000.000.000-00" />
                             </div>
                             <div>
                                 <label>Data de Nascimento</label>
-                                <input type="date" value={formData.birth_date} onChange={e => setFormData({ ...formData, birth_date: e.target.value })} required />
+                                <input type="date" value={formData.birth_date} onChange={e => setFormData({ ...formData, birth_date: e.target.value })} />
                             </div>
                             <div>
                                 <label>Sexo</label>
-                                <select value={formData.gender} onChange={e => setFormData({ ...formData, gender: e.target.value })} required>
+                                <select value={formData.gender} onChange={e => setFormData({ ...formData, gender: e.target.value })}>
                                     <option value="Male">Masculino</option>
                                     <option value="Female">Feminino</option>
                                     <option value="Other">Outro</option>
@@ -508,9 +508,9 @@ const PatientsPage = () => {
 
                         {/* Contact Info */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
-                            <div>
+                             <div>
                                 <label>Endereço de E-mail</label>
-                                <input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} required placeholder="paciente@mail.com" />
+                                <input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder="paciente@mail.com" />
                             </div>
                             <div>
                                 <label>Número de Telefone</label>
@@ -519,22 +519,22 @@ const PatientsPage = () => {
                         </div>
 
                         {/* Address Info */}
-                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2 border-t border-slate-100">
+                         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2 border-t border-slate-100">
                             <div className="sm:col-span-4">
                                 <label>Endereço <span className="text-xs text-slate-400 font-normal">(Rua/Avenida, Número, Complemento)</span></label>
-                                <input type="text" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} required placeholder="Ex: Rua das Flores, 123" />
+                                <input type="text" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} placeholder="Ex: Rua das Flores, 123" />
                             </div>
                             <div className="sm:col-span-2">
                                 <label>Cidade</label>
-                                <input type="text" value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} required placeholder="São Paulo" />
+                                <input type="text" value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} placeholder="São Paulo" />
                             </div>
                             <div>
                                 <label>Estado / UF</label>
-                                <input type="text" value={formData.state} onChange={e => setFormData({ ...formData, state: e.target.value })} required placeholder="SP" maxLength={2} className="uppercase" />
+                                <input type="text" value={formData.state} onChange={e => setFormData({ ...formData, state: e.target.value })} placeholder="SP" maxLength={2} className="uppercase" />
                             </div>
                             <div>
                                 <label>CEP</label>
-                                <input type="text" value={formData.zip_code} onChange={e => setFormData({ ...formData, zip_code: e.target.value })} required placeholder="00000-000" />
+                                <input type="text" value={formData.zip_code} onChange={e => setFormData({ ...formData, zip_code: e.target.value })} placeholder="00000-000" />
                             </div>
                         </div>
 
