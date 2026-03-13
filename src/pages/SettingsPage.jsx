@@ -24,6 +24,7 @@ const SettingsPage = () => {
         base_url: '',
         api_key: '',
         queue_id: '',
+        lembrete_ativo: false,
     });
     const [isSavingIntegration, setIsSavingIntegration] = useState(false);
     const [testPhone, setTestPhone] = useState('');
@@ -59,6 +60,7 @@ const SettingsPage = () => {
                         base_url: data.base_url || '',
                         api_key: data.api_key || '',
                         queue_id: data.queue_id || '',
+                        lembrete_ativo: data.lembrete_ativo || false,
                     });
                 }
             })
@@ -101,6 +103,7 @@ const SettingsPage = () => {
                 base_url: integration.base_url,
                 api_key: integration.api_key,
                 queue_id: Number(integration.queue_id),
+                lembrete_ativo: integration.lembrete_ativo,
             };
             if (integrationId) {
                 await axios.put(`/integrations/${integrationId}`, payload);
@@ -304,6 +307,22 @@ const SettingsPage = () => {
                                 </div>
                             </div>
 
+                            {/* Lembretes Automáticos */}
+                            <div className="flex items-center justify-between p-4 bg-green-50/50 border border-green-100 rounded-xl">
+                                <div>
+                                    <h4 className="text-sm font-bold text-slate-800">Lembretes Automáticos de Consulta</h4>
+                                    <p className="text-xs text-slate-500 mt-1">Envia mensagem WhatsApp 1 dia antes da consulta (horário definido pelo servidor).</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer ml-4 shrink-0">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={integration.lembrete_ativo}
+                                        onChange={e => setIntegration({ ...integration, lembrete_ativo: e.target.checked })}
+                                    />
+                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                                </label>
+                            </div>
 
                             {/* Botão Salvar Integração */}
                             <button

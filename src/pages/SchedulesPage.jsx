@@ -3,7 +3,7 @@ import axios from '../api/axiosConfig';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
 import Select from 'react-select';
-import { FaPlus, FaChevronLeft, FaChevronRight, FaCalendarCheck, FaMoneyBillWave, FaWhatsapp, FaEnvelope } from 'react-icons/fa';
+import { FaPlus, FaChevronLeft, FaChevronRight, FaCalendarCheck, FaMoneyBillWave, FaWhatsapp, FaEnvelope, FaPaperPlane } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import { sendKentroMessage } from '../services/kentroService';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
@@ -54,6 +54,7 @@ const SchedulesPage = () => {
         notifyEmail: true
     });
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', type: 'primary', onConfirm: null });
+    const [isResending, setIsResending] = useState(false);
 
     useEffect(() => {
         fetchData();
@@ -147,7 +148,9 @@ const SchedulesPage = () => {
             billingValue: '',
             billingMethod: '',
             notifyWhatsapp: true,
-            notifyEmail: false
+            notifyEmail: false,
+            lembrete_enviado: app.lembrete_enviado || false,
+            lembrete_enviado_em: app.lembrete_enviado_em || null,
         });
         setIsModalOpen(true);
     };
@@ -173,6 +176,30 @@ const SchedulesPage = () => {
                 }
             }
         });
+    };
+
+    /**
+     * POST /appointments/:id/reenviar-lembrete
+     * Reenvia o lembrete de consulta via WhatsApp manualmente.
+     */
+    const handleResendReminder = async (e) => {
+        e.preventDefault();
+        if (!editingId || isResending) return;
+        setIsResending(true);
+        try {
+            await axios.post(`/appointments/${editingId}/reenviar-lembrete`);
+            toast.success('Lembrete reenviado com sucesso!', { icon: '📱' });
+            setFormData(prev => ({ ...prev, lembrete_enviado: true, lembrete_enviado_em: new Date().toISOString() }));
+            fetchData();
+        } catch (error) {
+            const status = error.response?.status;
+            if (status === 400) toast.error('Integração Kentro não configurada ou inativa.');
+            else if (status === 404) toast.error('Agendamento não encontrado.');
+            else if (status === 500) toast.error('Falha na API do Kentro. Tente novamente.');
+            else toast.error('Erro ao reenviar lembrete.');
+        } finally {
+            setIsResending(false);
+        }
     };
 
 
@@ -450,7 +477,17 @@ const SchedulesPage = () => {
                         </div>
                         <div>
                             <h4 className="font-bold text-primary-dark">Motor de Agendamento</h4>
-                            <p className="text-xs text-primary/80">Selecione médico, paciente e slot de tempo (horário).</p>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <p className="text-xs text-primary/80">Selecione médico, paciente e slot de tempo (horário).</p>
+                                {editingId && formData.lembrete_enviado && (
+                                    <span
+                                        className="inline-flex items-center gap-1 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full"
+                                        title={formData.lembrete_enviado_em ? `Enviado em: ${new Date(formData.lembrete_enviado_em).toLocaleString('pt-BR')}` : ''}
+                                    >
+                                        <FaWhatsapp /> Lembrete Enviado
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -649,6 +686,17 @@ const SchedulesPage = () => {
                             <button type="button" className="btn-danger mr-auto" onClick={() => handleDelete(editingId)}>Cancelar Consulta</button>
                         )}
                         <div className="flex gap-3 justify-end flex-1">
+                            {editingId && (
+                                <button
+                                    type="button"
+                                    onClick={handleResendReminder}
+                                    disabled={isResending}
+                                    className="flex items-center gap-2 px-4 py-2 bg-green-50 hover:bg-green-100 text-green-700 font-bold rounded-lg transition-colors border border-green-200 text-sm disabled:opacity-50"
+                                >
+                                    <FaPaperPlane className={isResending ? 'animate-pulse' : ''} />
+                                    {isResending ? 'Enviando...' : 'Reenviar Lembrete'}
+                                </button>
+                            )}
                             <button type="button" className="btn-secondary" onClick={() => setIsModalOpen(false)}>Cancelar</button>
                             <button type="submit" className="btn-primary" style={{ margin: 0 }}>{editingId ? "Salvar Alterações" : "Confirmar Agendamento"}</button>
                         </div>
