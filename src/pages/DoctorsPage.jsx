@@ -48,7 +48,7 @@ const DoctorsPage = () => {
             setDoctors(res.data);
         } catch (error) {
             console.error('Fetch doctors error:', error);
-            alert('Error fetching doctors: ' + (error.message || 'Unknown error'));
+            toast.error('Erro ao carregar lista de médicos. Tente recarregar a página.');
         }
     };
 
@@ -80,7 +80,7 @@ const DoctorsPage = () => {
             setIsViewing(true);
             setIsModalOpen(true);
         } catch (error) {
-            alert('Error loading profile');
+            toast.error('Não foi possível carregar o perfil do médico. Tente novamente.');
         }
     };
 
@@ -121,7 +121,7 @@ const DoctorsPage = () => {
             setIsScheduleModalOpen(true);
         } catch (error) {
             console.error(error);
-            alert('Não foi possível carregar os horários. Iniciando form vazio.');
+            toast('Sem horários cadastrados. Iniciando formulário em branco.', { icon: 'ℹ️' });
             setSchedulesData([{ days_of_week: [1], start_time: '08:00', end_time: '18:00' }]);
             setIsEditingSchedule(true);
             setIsScheduleModalOpen(true);
@@ -182,7 +182,7 @@ const DoctorsPage = () => {
 
         } catch (error) {
             console.error(error);
-            alert(`Erro ao vincular horários: ${error.response?.data?.message || 'Erro desconhecido'}`);
+            toast.error(`Erro ao vincular horários: ${error.response?.data?.message || 'Erro desconhecido'}`);
         }
     };
 
@@ -203,7 +203,7 @@ const DoctorsPage = () => {
                     setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                     fetchDoctors();
                 } catch (error) {
-                    alert('Erro ao excluir médico');
+                    toast.error('Erro ao excluir médico. Verifique se ele não possui consultas vinculadas.');
                 }
             }
         });
@@ -240,7 +240,7 @@ const DoctorsPage = () => {
                     setIsModalOpen(false);
                     fetchDoctors();
                 } catch (error) {
-                    alert('Erro ao salvar médico');
+                    toast.error('Erro ao salvar médico. Verifique os dados e tente novamente.');
                 }
             }
         });

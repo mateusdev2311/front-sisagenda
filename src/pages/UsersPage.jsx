@@ -40,7 +40,7 @@ const UsersPage = () => {
             setUsers(res.data);
         } catch (error) {
             console.error('Failed to fetch users', error);
-            alert('Error fetching users');
+            toast.error('Erro ao carregar usuários. Tente recarregar a página.');
         }
     };
 
@@ -72,7 +72,7 @@ const UsersPage = () => {
             setIsViewing(true);
             setIsModalOpen(true);
         } catch (error) {
-            alert('Error loading profile');
+            toast.error('Não foi possível carregar o perfil do usuário. Tente novamente.');
         }
     };
 
@@ -92,7 +92,7 @@ const UsersPage = () => {
                     setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                     fetchUsers();
                 } catch (error) {
-                    alert('Erro ao deletar usuário');
+                    toast.error('Erro ao excluir usuário. Tente novamente.');
                 }
             }
         });
@@ -127,7 +127,7 @@ const UsersPage = () => {
                     setIsModalOpen(false);
                     fetchUsers();
                 } catch (error) {
-                    alert('Erro ao salvar usuário');
+                    toast.error('Erro ao salvar usuário. Verifique os dados e tente novamente.');
                 }
             }
         });

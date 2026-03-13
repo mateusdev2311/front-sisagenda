@@ -23,7 +23,7 @@ const AdminCompaniesPage = () => {
             setCompanies(res.data);
         } catch (error) {
             console.error('Failed to fetch companies', error);
-            alert('Erro ao carregar clínicas');
+            toast.error('Erro ao carregar clínicas. Tente recarregar a página.');
         }
     };
 
@@ -41,7 +41,7 @@ const AdminCompaniesPage = () => {
             setIsViewing(true);
             setIsModalOpen(true);
         } catch (error) {
-            alert('Erro ao carregar detalhes da clínica');
+            toast.error('Erro ao carregar detalhes da clínica. Tente novamente.');
         }
     };
 
@@ -57,7 +57,7 @@ const AdminCompaniesPage = () => {
                     setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                     fetchCompanies();
                 } catch (error) {
-                    alert('Erro ao deletar clínica');
+                    toast.error('Erro ao excluir clínica. Tente novamente.');
                 }
             }
         });
@@ -77,7 +77,7 @@ const AdminCompaniesPage = () => {
                     setIsModalOpen(false);
                     fetchCompanies();
                 } catch (error) {
-                    alert('Erro ao cadastrar clínica');
+                    toast.error('Erro ao cadastrar clínica. Verifique os dados e tente novamente.');
                 }
             }
         });
@@ -96,7 +96,7 @@ const AdminCompaniesPage = () => {
                     fetchCompanies();
                 } catch (error) {
                     console.error('Erro ao atualizar status', error);
-                    alert('Erro ao atualizar o status da clínica.');
+                    toast.error('Erro ao atualizar o status da clínica. Tente novamente.');
                 }
             }
         });

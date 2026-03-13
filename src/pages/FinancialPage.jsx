@@ -148,7 +148,7 @@ const FinancialPage = () => {
                     setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                     fetchData();
                 } catch (error) {
-                    alert('Erro ao excluir registro.');
+                    toast.error('Erro ao excluir registro. Tente novamente.');
                 }
             }
         });
@@ -171,7 +171,7 @@ const FinancialPage = () => {
                     let derivedPatientId = formData.patientId || (selectedApp ? (selectedApp.patient_id || selectedApp.user_id) : null);
 
                     if (!formData.appointmentId || !derivedPatientId) {
-                        alert("Erro de Associação: Toda fatura precisa estar vinculada a uma Consulta e a um Paciente cadastrado (IDs não podem ser nulos).");
+                        toast.error('Associação inválida: a fatura precisa estar vinculada a uma Consulta e a um Paciente cadastrado.');
                         return;
                     }
 
@@ -194,7 +194,7 @@ const FinancialPage = () => {
                     setIsModalOpen(false);
                     fetchData();
                 } catch (error) {
-                    alert('Erro ao processar o faturamento: ' + (error.response?.data?.message || 'Erro Interno'));
+                    toast.error('Erro ao processar faturamento: ' + (error.response?.data?.message || 'Erro Interno'));
                 }
             }
         });

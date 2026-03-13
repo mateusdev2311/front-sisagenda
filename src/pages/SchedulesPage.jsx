@@ -172,7 +172,7 @@ const SchedulesPage = () => {
                     setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                     fetchData();
                 } catch (error) {
-                    alert('Erro ao cancelar agendamento');
+                    toast.error(error.response?.data?.error || 'Erro ao cancelar agendamento.');
                 }
             }
         });
@@ -271,7 +271,7 @@ const SchedulesPage = () => {
                             setPatients(prev => [...prev, newPatRes.data]);
                             toast.success('Paciente cadastrado rapidamente!');
                         } catch (err) {
-                            alert(err.response?.data?.error || err.response?.data?.message || 'Erro ao cadastrar paciente.');
+                            toast.error(err.response?.data?.error || err.response?.data?.message || 'Erro ao cadastrar paciente.');
                             setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                             return; // Para a execução do agendamento se o paciente falhar
                         }
@@ -288,7 +288,8 @@ const SchedulesPage = () => {
 
                     const appointmentDate = new Date(finalDateStr);
                     if (isNaN(appointmentDate)) {
-                        alert('Data Inválida'); return;
+                        toast.error('Data inválida. Verifique o campo de data e tente novamente.');
+                        return;
                     }
                     const dayString = appointmentDate.toISOString().split('T')[0];
                     const scheduleRes = await axios.get(`/doctors/${formData.doctor_id}/schedule`).catch(() => ({ data: [] }));
@@ -298,7 +299,8 @@ const SchedulesPage = () => {
                     // Allow skipping conflict check if editing the same record on same time
                     const conflict = existing.find(apt => new Date(apt.date).getTime() === reqTime && String(apt.id) !== String(editingId));
                     if (conflict) {
-                        alert('O Médico já possui uma consulta marcada exatamente neste horário.'); return;
+                        toast.error('O médico já possui uma consulta exatamente neste horário. Escolha outro slot.');
+                        return;
                     }
 
                     let savedApptId = editingId;
@@ -380,7 +382,7 @@ const SchedulesPage = () => {
                     toast.success(editingId ? 'Agendamento atualizado com sucesso!' : 'Novo agendamento confirmado!');
                     fetchData();
                 } catch (error) {
-                    alert(error.response?.data?.error || 'Erro ao processar agendamento');
+                    toast.error(error.response?.data?.error || 'Erro ao processar agendamento. Tente novamente.');
                 }
             }
         });
