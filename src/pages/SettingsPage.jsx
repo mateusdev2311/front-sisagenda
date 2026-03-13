@@ -24,6 +24,8 @@ const SettingsPage = () => {
         base_url: '',
         api_key: '',
         queue_id: '',
+        lembrete_ativo: false,
+        horario_disparo: '08:00',
     });
     const [isSavingIntegration, setIsSavingIntegration] = useState(false);
     const [testPhone, setTestPhone] = useState('');
@@ -59,6 +61,8 @@ const SettingsPage = () => {
                         base_url: data.base_url || '',
                         api_key: data.api_key || '',
                         queue_id: data.queue_id || '',
+                        lembrete_ativo: data.lembrete_ativo || false,
+                        horario_disparo: data.horario_disparo || '08:00',
                     });
                 }
             })
@@ -101,6 +105,8 @@ const SettingsPage = () => {
                 base_url: integration.base_url,
                 api_key: integration.api_key,
                 queue_id: Number(integration.queue_id),
+                lembrete_ativo: integration.lembrete_ativo,
+                horario_disparo: integration.horario_disparo,
             };
             if (integrationId) {
                 await axios.put(`/integrations/${integrationId}`, payload);
@@ -302,6 +308,44 @@ const SettingsPage = () => {
                                         placeholder="Sua chave secreta"
                                     />
                                 </div>
+                            </div>
+
+                            {/* Automação de Lembretes */}
+                            <div className="bg-green-50/50 border border-green-100 rounded-xl p-4 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h4 className="text-sm font-bold text-slate-800">Lembretes Automáticos de Consulta</h4>
+                                        <p className="text-xs text-slate-500 mt-1">Habilite para enviar mensagens 1 dia antes da consulta.</p>
+                                    </div>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            className="sr-only peer"
+                                            checked={integration.lembrete_ativo}
+                                            onChange={e => setIntegration({ ...integration, lembrete_ativo: e.target.checked })}
+                                        />
+                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                                    </label>
+                                </div>
+
+                                {integration.lembrete_ativo && (
+                                    <div className="animate-in fade-in slide-in-from-top-2 duration-300 pt-3 border-t border-green-200/50">
+                                        <label className="block text-sm font-bold text-slate-700 mb-1">Horário do Disparo (Mensagem Diária)</label>
+                                        <select
+                                            className="w-full sm:w-1/2 px-4 py-2 border border-green-200 rounded-lg bg-white text-slate-900 focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none"
+                                            value={integration.horario_disparo}
+                                            onChange={e => setIntegration({ ...integration, horario_disparo: e.target.value })}
+                                        >
+                                            {Array.from({ length: 23 }).map((_, i) => {
+                                                const hour = 8 + Math.floor(i / 2);
+                                                const minute = i % 2 === 0 ? '00' : '30';
+                                                const formattedTime = `${hour.toString().padStart(2, '0')}:${minute}`;
+                                                return <option key={formattedTime} value={formattedTime}>{formattedTime}</option>;
+                                            })}
+                                        </select>
+                                        <p className="text-[11px] text-slate-500 mt-1">Horários disponíveis: 08:00 às 19:00</p>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Botão Salvar Integração */}
