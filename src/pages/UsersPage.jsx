@@ -18,7 +18,7 @@ const UsersPage = () => {
     const [isViewing, setIsViewing] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
     const [editingId, setEditingId] = useState(null);
-    const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'USER' });
+    const [formData, setFormData] = useState({ name: '', email: '', password: '' });
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', type: 'primary', onConfirm: null });
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -48,7 +48,7 @@ const UsersPage = () => {
         setIsViewing(false);
         setEditingId(null);
         setCurrentUser(null);
-        setFormData({ name: '', email: '', password: '', role: 'USER' });
+        setFormData({ name: '', email: '', password: '' });
         setIsModalOpen(true);
     };
 
@@ -57,7 +57,7 @@ const UsersPage = () => {
         setEditingId(user.id);
         setCurrentUser(null);
         // Do not pre-fill password for security reasons (unless implementing a dedicated change-password endpoint)
-        setFormData({ name: user.name, email: user.email, password: '', role: user.role });
+        setFormData({ name: user.name, email: user.email, password: '' });
         setIsModalOpen(true);
     };
 
