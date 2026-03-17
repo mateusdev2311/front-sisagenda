@@ -14,7 +14,6 @@ const SettingsPage = () => {
         company_cnpj: '',
         timezone: 'America/Sao_Paulo',
         currency: 'BRL',
-        contactEmail: '',
     });
     const [isSavingSettings, setIsSavingSettings] = useState(false);
 
@@ -44,7 +43,6 @@ const SettingsPage = () => {
                         company_cnpj: data.company_cnpj || '',
                         timezone: data.timezone || 'America/Sao_Paulo',
                         currency: data.currency || 'BRL',
-                        contactEmail: data.contact_email || '',
                     }));
                 }
             })
@@ -73,12 +71,20 @@ const SettingsPage = () => {
         if (isSavingSettings) return;
         setIsSavingSettings(true);
         try {
-            await axios.put(`/system-settings/${settingsId}`, {
+            const payload = {
                 company_name: settings.company_name,
                 company_cnpj: settings.company_cnpj,
                 timezone: settings.timezone,
                 currency: settings.currency,
-            });
+            };
+
+            if (settingsId) {
+                await axios.put(`/system-settings/${settingsId}`, payload);
+            } else {
+                const res = await axios.post('/system-settings', payload);
+                const newData = Array.isArray(res.data) ? res.data[0] : res.data;
+                if (newData?.id) setSettingsId(newData.id);
+            }
             refreshSettings();
             toast.success('Dados da clínica salvos com sucesso!');
         } catch (err) {
@@ -202,24 +208,14 @@ const SettingsPage = () => {
                         <h3 className="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-3">Identidade da Clínica</h3>
 
                         <div className="flex flex-col sm:flex-row gap-6 mb-6">
-                            <div className="w-24 h-24 bg-slate-100 rounded-2xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-500 shrink-0 cursor-pointer hover:border-primary transition-colors">
-                                <FaUpload className="text-xl mb-1" />
-                                <span className="text-[10px] font-bold uppercase">Logo</span>
-                            </div>
                             <div className="flex-1 space-y-4">
                                 <div>
                                     <label className="block text-sm font-bold text-slate-700 mb-1">Nome Fantasia / Razão Social</label>
                                     <input type="text" className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 focus:ring-2 focus:ring-primary/20 outline-none" value={settings.company_name} onChange={e => setSettings({ ...settings, company_name: e.target.value })} />
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-1">CNPJ</label>
-                                        <input type="text" className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 focus:ring-2 focus:ring-primary/20 outline-none" value={settings.company_cnpj} onChange={e => setSettings({ ...settings, company_cnpj: e.target.value })} />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-1">E-mail de Contato</label>
-                                        <input type="email" className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 focus:ring-2 focus:ring-primary/20 outline-none" value={settings.contactEmail || ''} onChange={e => setSettings({ ...settings, contactEmail: e.target.value })} />
-                                    </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">CNPJ</label>
+                                    <input type="text" className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 focus:ring-2 focus:ring-primary/20 outline-none" value={settings.company_cnpj} onChange={e => setSettings({ ...settings, company_cnpj: e.target.value })} />
                                 </div>
                             </div>
                         </div>
