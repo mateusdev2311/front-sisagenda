@@ -24,9 +24,7 @@ const PatientsPage = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Premium Feature: Patient Document Uploads
-    const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'documents'
-    const [attachments, setAttachments] = useState([]);
+    // Premium Feature: Patient Document Uploads Removed
 
     /**
      * Ciclo de Vida do Componente
@@ -81,69 +79,10 @@ const PatientsPage = () => {
             const res = await axios.get(`/patients/${id}`);
             setCurrentPatient(res.data);
             setIsViewing(true);
-            setActiveTab('overview');
-
-            // Mock fetching attachments from API /patients/:id/documents
-            setAttachments([
-                { id: 1, name: 'Exame_de_Sangue_2023.pdf', type: 'application/pdf', size: '1.2 MB', date: new Date().toISOString() }
-            ]);
-
             setIsModalOpen(true);
         } catch (error) {
             toast.error('Error loading profile');
         }
-    };
-
-    /**
-     * Módulo Premium: Upload e Armazenamento de Documentos
-     */
-    const handleFileUpload = (e) => {
-        const files = Array.from(e.target.files);
-        if (files.length === 0) return;
-
-        // Limita o tamanho do arquivo para 5MB no frontend
-        const maxSizeBytes = 5 * 1024 * 1024;
-        const validFiles = files.filter(f => f.size <= maxSizeBytes);
-        if (validFiles.length < files.length) {
-            toast.error("Alguns arquivos excedem o limite de 5MB e não foram anexados.");
-        }
-
-        const newAttachments = validFiles.map(file => {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve({
-                    id: Date.now() + Math.random(),
-                    name: file.name,
-                    type: file.type,
-                    size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
-                    date: new Date().toISOString(),
-                    dataUrl: reader.result
-                });
-                reader.onerror = error => reject(error);
-            });
-        });
-
-        Promise.all(newAttachments).then(results => {
-            setAttachments(prev => [...prev, ...results]);
-            toast.success("Documentos anexados com sucesso ao cache temporário.");
-        }).catch(err => {
-            toast.error("Erro ao ler arquivos. Tente novamente.");
-        });
-    };
-
-    const handleRemoveAttachment = (attachId) => {
-        setConfirmDialog({
-            isOpen: true,
-            title: 'Excluir Anexo',
-            message: 'Tem certeza que deseja apagar este documento permanentemente do cadastro do paciente?',
-            type: 'danger',
-            onConfirm: () => {
-                setAttachments(prev => prev.filter(a => a.id !== attachId));
-                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-                toast.success('Anexo removido com sucesso.');
-            }
-        });
     };
 
     /**
@@ -380,105 +319,39 @@ const PatientsPage = () => {
                             </div>
                         </div>
 
-                        {/* Tabs de Navegação Interna */}
-                        <div className="flex border-b border-slate-200 mt-6 mb-4">
-                            <button
-                                className={`px-4 py-2 text-sm font-bold border-b-2 transition-colors ${activeTab === 'overview' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}`}
-                                onClick={() => setActiveTab('overview')}
-                            >
-                                Visão Geral
-                            </button>
-                            <button
-                                className={`px-4 py-2 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'documents' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}`}
-                                onClick={() => setActiveTab('documents')}
-                            >
-                                <FaFileUpload className={activeTab === 'documents' ? 'text-primary' : 'text-slate-400'} />
-                                Documentos e Exames <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-xs">{attachments.length}</span>
-                            </button>
-                        </div>
-
-                        {activeTab === 'overview' ? (
-                            <div className="bg-white border border-slate-100 rounded-xl divide-y divide-slate-100 overflow-hidden">
-                                <div className="grid grid-cols-2">
-                                    <div className="p-4 border-r border-slate-100">
-                                        <span className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Data de Nascimento</span>
-                                        <span className="text-sm font-semibold text-slate-800">{currentPatient.birth_date ? new Date(currentPatient.birth_date).toLocaleDateString() : 'N/A'}</span>
-                                    </div>
-                                    <div className="p-4">
-                                        <span className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Número do CPF</span>
-                                        <span className="text-sm font-semibold text-slate-800">{currentPatient.cpf || 'N/A'}</span>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-2">
-                                    <div className="p-4 border-r border-slate-100">
-                                        <span className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Número de Telefone</span>
-                                        <span className="text-sm font-semibold text-slate-800">{currentPatient.number || 'N/A'}</span>
-                                    </div>
-                                    <div className="p-4">
-                                        <span className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Endereço de E-mail</span>
-                                        <span className="text-sm font-semibold text-slate-800">{currentPatient.email || 'N/A'}</span>
-                                    </div>
+                        <div className="bg-white border border-slate-100 rounded-xl divide-y divide-slate-100 overflow-hidden mt-6">
+                            <div className="grid grid-cols-2">
+                                <div className="p-4 border-r border-slate-100">
+                                    <span className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Data de Nascimento</span>
+                                    <span className="text-sm font-semibold text-slate-800">{currentPatient.birth_date ? new Date(currentPatient.birth_date).toLocaleDateString() : 'N/A'}</span>
                                 </div>
                                 <div className="p-4">
-                                    <span className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Endereço Residencial</span>
-                                    <span className="text-sm font-semibold text-slate-800">
-                                        {currentPatient.address ? `${currentPatient.address}` : 'Nenhum endereço fornecido'}
-                                    </span>
-                                    {(currentPatient.city || currentPatient.state || currentPatient.zip_code) && (
-                                        <span className="block text-sm text-slate-500 mt-1">
-                                            {[currentPatient.city, currentPatient.state, currentPatient.zip_code].filter(Boolean).join(' - ')}
-                                        </span>
-                                    )}
+                                    <span className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Número do CPF</span>
+                                    <span className="text-sm font-semibold text-slate-800">{currentPatient.cpf || 'N/A'}</span>
                                 </div>
                             </div>
-                        ) : (
-                            <div className="space-y-4">
-                                {/* Upload Box */}
-                                <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center bg-slate-50 hover:bg-slate-100 hover:border-primary transition-colors group cursor-pointer relative">
-                                    <input
-                                        type="file"
-                                        multiple
-                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                        onChange={handleFileUpload}
-                                        accept=".pdf, image/png, image/jpeg"
-                                    />
-                                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm group-hover:scale-110 transition-transform">
-                                        <FaFileUpload className="text-xl text-primary" />
-                                    </div>
-                                    <h4 className="font-bold text-slate-700">Clique para enviar ou arraste arquivos</h4>
-                                    <p className="text-xs text-slate-500 mt-1">Suporta PDF, PNG e JPG (Máx. 5MB por arquivo)</p>
+                            <div className="grid grid-cols-2">
+                                <div className="p-4 border-r border-slate-100">
+                                    <span className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Número de Telefone</span>
+                                    <span className="text-sm font-semibold text-slate-800">{currentPatient.number || 'N/A'}</span>
                                 </div>
-
-                                {/* List of Attachments */}
-                                {attachments.length > 0 && (
-                                    <div className="space-y-2 mt-4 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
-                                        {attachments.map(file => (
-                                            <div key={file.id} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl hover:shadow-sm transition-shadow">
-                                                <div className="flex items-center gap-3 overflow-hidden">
-                                                    <div className={`p-2 rounded-lg ${file.type === 'application/pdf' ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'}`}>
-                                                        <FaFilePdf className="text-lg" />
-                                                    </div>
-                                                    <div className="overflow-hidden">
-                                                        <div className="text-sm font-bold text-slate-700 truncate" title={file.name}>{file.name}</div>
-                                                        <div className="text-xs text-slate-500">{file.size} • Anexado em {new Date(file.date).toLocaleDateString()}</div>
-                                                    </div>
-                                                </div>
-                                                <div className="flex gap-2 shrink-0">
-                                                    {file.dataUrl && (
-                                                        <a href={file.dataUrl} download={file.name} className="p-2 text-slate-400 hover:bg-primary/10 hover:text-primary rounded-lg transition-colors" title="Baixar Arquivo">
-                                                            <FaDownload />
-                                                        </a>
-                                                    )}
-                                                    <button className="p-2 text-slate-400 hover:bg-danger/10 hover:text-danger rounded-lg transition-colors" title="Excluir" onClick={() => handleRemoveAttachment(file.id)}>
-                                                        <FaTrash />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                                <div className="p-4">
+                                    <span className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Endereço de E-mail</span>
+                                    <span className="text-sm font-semibold text-slate-800">{currentPatient.email || 'N/A'}</span>
+                                </div>
+                            </div>
+                            <div className="p-4">
+                                <span className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Endereço Residencial</span>
+                                <span className="text-sm font-semibold text-slate-800">
+                                    {currentPatient.address ? `${currentPatient.address}` : 'Nenhum endereço fornecido'}
+                                </span>
+                                {(currentPatient.city || currentPatient.state || currentPatient.zip_code) && (
+                                    <span className="block text-sm text-slate-500 mt-1">
+                                        {[currentPatient.city, currentPatient.state, currentPatient.zip_code].filter(Boolean).join(' - ')}
+                                    </span>
                                 )}
                             </div>
-                        )}
+                        </div>
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit} className="space-y-4">
