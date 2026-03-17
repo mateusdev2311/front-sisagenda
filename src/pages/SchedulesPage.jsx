@@ -3,7 +3,7 @@ import axios from '../api/axiosConfig';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
 import Select from 'react-select';
-import { FaPlus, FaChevronLeft, FaChevronRight, FaCalendarCheck, FaMoneyBillWave, FaWhatsapp, FaEnvelope, FaPaperPlane } from 'react-icons/fa';
+import { FaPlus, FaChevronLeft, FaChevronRight, FaCalendarCheck, FaMoneyBillWave, FaWhatsapp, FaEnvelope, FaPaperPlane, FaUserMd } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import { sendKentroMessage } from '../services/kentroService';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
@@ -39,6 +39,7 @@ const SchedulesPage = () => {
     const [appointments, setAppointments] = useState([]);
     const [doctors, setDoctors] = useState([]);
     const [patients, setPatients] = useState([]);
+    const [selectedDoctorFilter, setSelectedDoctorFilter] = useState('all');
     const [kentroConfig, setKentroConfig] = useState(null); // { base_url, api_key, queue_id }
 
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -121,7 +122,13 @@ const SchedulesPage = () => {
      * Helper para Mapear Agendamentos em "Eventos" da Biblioteca
      */
     const getCalendarEvents = () => {
-        return appointments.map(app => {
+        let filteredApps = appointments;
+        
+        if (selectedDoctorFilter !== 'all') {
+            filteredApps = appointments.filter(app => String(app.doctor_id) === String(selectedDoctorFilter));
+        }
+
+        return filteredApps.map(app => {
             const doc = doctors.find(d => d.id === app.doctor_id);
             const pat = patients.find(p => p.id === (app.patient_id || app.user_id)) || { name: 'Paciente' };
 
@@ -454,6 +461,55 @@ const SchedulesPage = () => {
                 </div>
 
                 <div className="flex items-center gap-4 bg-white dark:bg-slate-800 px-2 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
+                    <div className="flex items-center gap-3 border-r border-slate-200 dark:border-slate-700 pr-4 mr-2 hidden md:flex">
+                        <div className="bg-primary/10 p-2 rounded-lg text-primary">
+                            <FaUserMd className="text-lg" />
+                        </div>
+                        <div className="flex flex-col">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0 leading-none">Filtrar por Médico</label>
+                            <div className="min-w-[200px]">
+                                <Select
+                                    options={[
+                                        { value: 'all', label: 'Todos os Médicos' },
+                                        ...doctors.map(doc => ({ value: doc.id, label: `Dr. ${doc.name}` }))
+                                    ]}
+                                    value={selectedDoctorFilter === 'all' 
+                                        ? { value: 'all', label: 'Todos os Médicos' }
+                                        : { value: selectedDoctorFilter, label: `Dr. ${doctors.find(d => String(d.id) === String(selectedDoctorFilter))?.name}` }
+                                    }
+                                    onChange={(selected) => setSelectedDoctorFilter(selected ? selected.value : 'all')}
+                                    placeholder="Selecione..."
+                                    className="text-sm font-bold"
+                                    classNamePrefix="react-select"
+                                    styles={{
+                                        control: (base) => ({
+                                            ...base,
+                                            border: 'none',
+                                            backgroundColor: 'transparent',
+                                            boxShadow: 'none',
+                                            minHeight: 'auto',
+                                            cursor: 'pointer'
+                                        }),
+                                        valueContainer: (base) => ({
+                                            ...base,
+                                            padding: '0'
+                                        }),
+                                        dropdownIndicator: (base) => ({
+                                            ...base,
+                                            padding: '0 4px'
+                                        }),
+                                        indicatorSeparator: () => ({
+                                            display: 'none'
+                                        }),
+                                        singleValue: (base) => ({
+                                            ...base,
+                                            color: '#334155'
+                                        })
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    </div>
                     <button className="btn-primary py-1.5" onClick={handleOpenCreateLocal}>
                         <FaPlus className="text-sm" /> Nova Consulta
                     </button>
