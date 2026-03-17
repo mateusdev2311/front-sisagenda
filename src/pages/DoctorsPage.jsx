@@ -170,7 +170,7 @@ const DoctorsPage = () => {
                 });
             });
 
-            await axios.post(`/doctors/${scheduleDoctorId}/schedule`, {
+            await axios.put(`/doctors/${scheduleDoctorId}/schedule`, {
                 schedules: flattenedPayload
             });
             setSuccessMessage('Horários de atendimento salvos com sucesso!');

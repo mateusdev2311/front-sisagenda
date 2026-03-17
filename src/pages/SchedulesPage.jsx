@@ -28,9 +28,9 @@ const localizer = dateFnsLocalizer({
 });
 
 const TIME_SLOTS = [];
-for (let h = 8; h <= 18; h++) {
+for (let h = 7; h <= 21; h++) {
     TIME_SLOTS.push(`${String(h).padStart(2, '0')}:00`);
-    if (h !== 18) TIME_SLOTS.push(`${String(h).padStart(2, '0')}:30`);
+    if (h !== 21) TIME_SLOTS.push(`${String(h).padStart(2, '0')}:30`);
 }
 
 const SchedulesPage = () => {
@@ -55,6 +55,8 @@ const SchedulesPage = () => {
     });
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', type: 'primary', onConfirm: null });
     const [isResending, setIsResending] = useState(false);
+    const [doctorSchedule, setDoctorSchedule] = useState([]); // Horários de trabalho do médico
+    const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
 
     useEffect(() => {
         fetchData();
@@ -66,6 +68,24 @@ const SchedulesPage = () => {
             })
             .catch(() => { }); // Sem integração configurada é OK silenciosamente
     }, [currentDate]);
+
+    // Buscar agenda de horários do médico quando selecionado
+    useEffect(() => {
+        if (formData.doctor_id) {
+            setIsLoadingSchedule(true);
+            axios.get(`/doctors/${formData.doctor_id}/schedule`)
+                .then(res => {
+                    setDoctorSchedule(res.data || []);
+                })
+                .catch(err => {
+                    console.error('Erro ao buscar agenda do médico:', err);
+                    setDoctorSchedule([]);
+                })
+                .finally(() => setIsLoadingSchedule(false));
+        } else {
+            setDoctorSchedule([]);
+        }
+    }, [formData.doctor_id]);
 
     /**
      * API: Múltiplas Requisições GET Simultâneas p/ Estado Inicial do Calendário
@@ -291,15 +311,33 @@ const SchedulesPage = () => {
                         toast.error('Data inválida. Verifique o campo de data e tente novamente.');
                         return;
                     }
-                    const dayString = appointmentDate.toISOString().split('T')[0];
-                    const scheduleRes = await axios.get(`/doctors/${formData.doctor_id}/schedule`).catch(() => ({ data: [] }));
-                    const existing = scheduleRes.data || [];
-                    const reqTime = appointmentDate.getTime();
 
-                    // Allow skipping conflict check if editing the same record on same time
-                    const conflict = existing.find(apt => new Date(apt.date).getTime() === reqTime && String(apt.id) !== String(editingId));
+                    // 1. Validar se está dentro do horário de atendimento do médico
+                    const dayOfWeek = appointmentDate.getDay();
+                    const apptTime = finalDateStr.split('T')[1].substring(0, 5);
+                    
+                    const canAttend = doctorSchedule.some(sched => {
+                        if (sched.day_of_week !== dayOfWeek) return false;
+                        return apptTime >= sched.start_time && apptTime < sched.end_time;
+                    });
+
+                    if (!canAttend && doctorSchedule.length > 0) {
+                        toast.error('Este médico não atende neste horário/dia.');
+                        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                        return;
+                    }
+
+                    // 2. Validar conflito com outras consultas do mesmo médico
+                    const reqTime = appointmentDate.getTime();
+                    const conflict = appointments.find(apt => {
+                        if (String(apt.doctor_id) !== String(formData.doctor_id)) return false;
+                        if (String(apt.id) === String(editingId)) return false;
+                        return new Date(apt.date).getTime() === reqTime;
+                    });
+
                     if (conflict) {
-                        toast.error('O médico já possui uma consulta exatamente neste horário. Escolha outro slot.');
+                        toast.error('O médico já possui uma consulta exatamente neste horário.');
+                        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                         return;
                     }
 
@@ -583,39 +621,73 @@ const SchedulesPage = () => {
                         </div>
                         {formData.date && formData.date.split('T')[0] && formData.doctor_id ? (
                             <div className="md:col-span-2 mt-2">
-                                <label className="mb-2 block font-bold text-slate-700">Horários Disponíveis (Livres)</label>
-                                <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
-                                    {TIME_SLOTS.map(time => {
-                                        const isSelected = formData.date && formData.date.includes('T') && formData.date.split('T')[1].substring(0, 5) === time;
-                                        const slotDateTimeStr = `${formData.date.split('T')[0]}T${time}`;
-                                        const slotTimeMs = new Date(slotDateTimeStr).getTime();
+                                <label className="mb-2 block font-bold text-slate-700 flex items-center gap-2">
+                                    Horários Disponíveis (Livres)
+                                    {isLoadingSchedule && <span className="text-xs font-normal text-slate-400 animate-pulse">(Buscando agenda...)</span>}
+                                </label>
+                                
+                                {isLoadingSchedule ? (
+                                    <div className="flex justify-center py-8">
+                                        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
+                                            {TIME_SLOTS.filter(time => {
+                                                const slotDateTimeStr = `${formData.date.split('T')[0]}T${time}`;
+                                                const slotTimeMs = new Date(slotDateTimeStr).getTime();
+                                                const dayOfWeek = new Date(slotDateTimeStr).getDay();
 
-                                        const isBusy = appointments.some(evt => {
-                                            if (String(evt.doctor_id) !== String(formData.doctor_id)) return false;
-                                            if (String(evt.id) === String(editingId)) return false;
-                                            return new Date(evt.date).getTime() === slotTimeMs;
-                                        });
+                                                // 1. Verificar se o médico atende nesse dia/horário
+                                                const isAtending = doctorSchedule.length === 0 || doctorSchedule.some(sched => {
+                                                    if (sched.day_of_week !== dayOfWeek) return false;
+                                                    return time >= sched.start_time && time < sched.end_time;
+                                                });
+                                                if (!isAtending) return false;
 
-                                        if (isBusy) return null; // Não mostra os ocupados, conforme solicitado pelo usuário
+                                                // 2. Verificar se já há consulta marcada (Busy)
+                                                const isBusy = appointments.some(evt => {
+                                                    if (String(evt.doctor_id) !== String(formData.doctor_id)) return false;
+                                                    if (String(evt.id) === String(editingId)) return false;
+                                                    return new Date(evt.date).getTime() === slotTimeMs;
+                                                });
+                                                return !isBusy;
+                                            }).map(time => {
+                                                const isSelected = formData.date && formData.date.includes('T') && formData.date.split('T')[1].substring(0, 5) === time;
+                                                return (
+                                                    <button
+                                                        key={time}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const currentDate = formData.date.split('T')[0];
+                                                            setFormData({ ...formData, date: `${currentDate}T${time}` });
+                                                        }}
+                                                        className={`py-2 text-sm font-bold rounded-lg border transition-all duration-200 shadow-sm ${isSelected
+                                                            ? 'bg-primary border-primary text-white shadow-md scale-105'
+                                                            : 'bg-white border-slate-300 text-slate-700 hover:border-primary hover:text-primary hover:bg-primary/5'
+                                                            }`}
+                                                    >
+                                                        {time}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
 
-                                        return (
-                                            <button
-                                                key={time}
-                                                type="button"
-                                                onClick={() => {
-                                                    const currentDate = formData.date.split('T')[0];
-                                                    setFormData({ ...formData, date: `${currentDate}T${time}` });
-                                                }}
-                                                className={`py-2 text-sm font-bold rounded-lg border transition-all duration-200 shadow-sm ${isSelected
-                                                    ? 'bg-primary border-primary text-white shadow-md scale-105'
-                                                    : 'bg-white border-slate-300 text-slate-700 hover:border-primary hover:text-primary hover:bg-primary/5'
-                                                    }`}
-                                            >
-                                                {time}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
+                                        {/* Mensagem se não sobrar nenhum slot */}
+                                        {TIME_SLOTS.filter(t => {
+                                            const d = new Date(`${formData.date.split('T')[0]}T${t}`).getDay();
+                                            const isAtending = doctorSchedule.length === 0 || doctorSchedule.some(s => s.day_of_week === d && t >= s.start_time && t < s.end_time);
+                                            if (!isAtending) return false;
+                                            const slotTimeMs = new Date(`${formData.date.split('T')[0]}T${t}`).getTime();
+                                            const isBusy = appointments.some(evt => String(evt.doctor_id) === String(formData.doctor_id) && String(evt.id) !== String(editingId) && new Date(evt.date).getTime() === slotTimeMs);
+                                            return !isBusy;
+                                        }).length === 0 && (
+                                            <div className="mt-2 p-3 bg-red-50 border border-red-100 rounded-lg text-red-600 text-xs text-center font-medium">
+                                                Infelizmente, o médico não possui horários disponíveis para a data selecionada.
+                                            </div>
+                                        )}
+                                    </>
+                                )}
                             </div>
                         ) : (
                             <div className="md:col-span-2 mt-2 p-4 bg-slate-50 border border-slate-200 rounded-lg text-center text-slate-500 text-sm">
