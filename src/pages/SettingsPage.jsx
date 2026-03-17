@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FaBuilding, FaGlobe, FaSave, FaUpload, FaWhatsapp, FaPlug, FaLink, FaPaperPlane, FaCode, FaExternalLinkAlt } from 'react-icons/fa';
+import { FaBuilding, FaGlobe, FaSave, FaUpload, FaWhatsapp, FaPlug, FaLink, FaPaperPlane, FaCode, FaExternalLinkAlt, FaInfoCircle } from 'react-icons/fa';
 import axios from '../api/axiosConfig';
 import toast from 'react-hot-toast';
 import { useSettings } from '../context/SettingsContext';
@@ -20,10 +20,14 @@ const SettingsPage = () => {
     // ─── Integração Kentro ────────────────────────────────────────────────────
     const [integrationId, setIntegrationId] = useState(null); // null = não cadastrado ainda
     const [integration, setIntegration] = useState({
+        name: 'Kentro',
         base_url: '',
         api_key: '',
         queue_id: '',
         lembrete_ativo: false,
+        is_official_api: false,
+        whatsapp_message_text: '',
+        whatsapp_template_id: '',
     });
     const [isSavingIntegration, setIsSavingIntegration] = useState(false);
     const [testPhone, setTestPhone] = useState('');
@@ -55,10 +59,14 @@ const SettingsPage = () => {
                 if (data) {
                     setIntegrationId(data.id);
                     setIntegration({
+                        name: data.name || 'Kentro',
                         base_url: data.base_url || '',
                         api_key: data.api_key || '',
                         queue_id: data.queue_id || '',
                         lembrete_ativo: data.lembrete_ativo || false,
+                        is_official_api: data.is_official_api || false,
+                        whatsapp_message_text: data.whatsapp_message_text || '',
+                        whatsapp_template_id: data.whatsapp_template_id || '',
                     });
                 }
             })
@@ -105,11 +113,14 @@ const SettingsPage = () => {
         setIsSavingIntegration(true);
         try {
             const payload = {
-                name: 'Kentro',
+                name: integration.name,
                 base_url: integration.base_url,
                 api_key: integration.api_key,
                 queue_id: Number(integration.queue_id),
                 lembrete_ativo: integration.lembrete_ativo,
+                is_official_api: integration.is_official_api,
+                whatsapp_message_text: integration.is_official_api ? '' : integration.whatsapp_message_text,
+                whatsapp_template_id: integration.is_official_api ? integration.whatsapp_template_id : '',
             };
             if (integrationId) {
                 await axios.put(`/integrations/${integrationId}`, payload);
@@ -264,6 +275,18 @@ const SettingsPage = () => {
                         </div>
 
                         <div className="space-y-4">
+                            {/* Nome da Integração */}
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Nome da Integração</label>
+                                <input
+                                    type="text"
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none"
+                                    value={integration.name}
+                                    onChange={e => setIntegration({ ...integration, name: e.target.value })}
+                                    placeholder="Ex: Kentro Zap"
+                                />
+                            </div>
+
                             {/* Base URL */}
                             <div>
                                 <label className="block text-sm font-bold text-slate-700 mb-1">
@@ -304,6 +327,82 @@ const SettingsPage = () => {
                                         placeholder="Sua chave secreta"
                                     />
                                 </div>
+                            </div>
+
+                            {/* Tipo de Conexão */}
+                            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                                <label className="block text-sm font-bold text-slate-700 mb-3">Tipo de Conexão WhatsApp</label>
+                                <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="whatsapp_type"
+                                            className="w-4 h-4 text-green-600 focus:ring-green-500"
+                                            checked={!integration.is_official_api}
+                                            onChange={() => setIntegration({ ...integration, is_official_api: false, whatsapp_template_id: '' })}
+                                        />
+                                        <span className="text-sm text-slate-700 font-medium">WhatsApp Business Padrão</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="whatsapp_type"
+                                            className="w-4 h-4 text-green-600 focus:ring-green-500"
+                                            checked={integration.is_official_api}
+                                            onChange={() => setIntegration({ ...integration, is_official_api: true, whatsapp_message_text: '' })}
+                                        />
+                                        <span className="text-sm text-slate-700 font-medium">WhatsApp API Oficial</span>
+                                    </label>
+                                </div>
+
+                                {/* Campos Condicionais */}
+                                {!integration.is_official_api ? (
+                                    <div className="animate-in fade-in zoom-in duration-300">
+                                        <label className="block text-sm font-bold text-slate-700 mb-1">Texto da Mensagem</label>
+                                        <textarea
+                                            className="w-full px-4 py-3 border border-slate-200 rounded-lg bg-white text-slate-900 focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none resize-none h-24 text-sm"
+                                            value={integration.whatsapp_message_text}
+                                            onChange={e => setIntegration({ ...integration, whatsapp_message_text: e.target.value })}
+                                            placeholder="Ex: Olá {nome_paciente}, sua consulta..."
+                                        ></textarea>
+                                        <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                                            Você pode personalizar a mensagem usando as tags: 
+                                            <code className="bg-slate-200 px-1 py-0.5 rounded mx-1">{'{nome_paciente}'}</code> 
+                                            <code className="bg-slate-200 px-1 py-0.5 rounded mx-1">{'{nome_medico}'}</code> 
+                                            <code className="bg-slate-200 px-1 py-0.5 rounded mx-1">{'{data}'}</code> 
+                                            <code className="bg-slate-200 px-1 py-0.5 rounded mx-1">{'{hora}'}</code>.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="animate-in fade-in zoom-in duration-300">
+                                        <div className="flex items-center gap-2 mb-1 relative group">
+                                            <label className="block text-sm font-bold text-slate-700">ID do Template (Template ID)</label>
+                                            <FaInfoCircle className="text-slate-400 hover:text-green-500 cursor-help transition-colors" />
+                                            
+                                            {/* Tooltip Hover */}
+                                            <div className="absolute left-0 bottom-full mb-2 w-72 bg-slate-800 text-white text-xs p-3 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 pointer-events-none">
+                                                <p className="font-bold mb-1 text-green-400">Parâmetros Obrigatórios (Meta):</p>
+                                                <p className="mb-2 text-slate-300 leading-relaxed">O template precisa ser aprovado com as 4 variáveis na seguinte ordem exata:</p>
+                                                <ul className="space-y-1 font-mono text-[10px] bg-slate-900/50 p-2 rounded-lg border border-slate-700">
+                                                    <li><span className="text-green-400">{'{{1}}'}</span> : nome_paciente</li>
+                                                    <li><span className="text-green-400">{'{{2}}'}</span> : nome_medico</li>
+                                                    <li><span className="text-green-400">{'{{3}}'}</span> : data</li>
+                                                    <li><span className="text-green-400">{'{{4}}'}</span> : hora</li>
+                                                </ul>
+                                                <div className="absolute -bottom-1 left-28 w-2 h-2 bg-slate-800 rotate-45"></div>
+                                            </div>
+                                        </div>
+                                        
+                                        <input
+                                            type="text"
+                                            className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none"
+                                            value={integration.whatsapp_template_id}
+                                            onChange={e => setIntegration({ ...integration, whatsapp_template_id: e.target.value })}
+                                            placeholder="Ex: d1a2b3c4-5e6f..."
+                                        />
+                                        <p className="text-[11px] text-slate-500 mt-1">Insira aqui o ID do template aprovado no Facebook/Meta.</p>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Lembretes Automáticos */}
