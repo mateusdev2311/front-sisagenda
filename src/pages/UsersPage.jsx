@@ -170,7 +170,6 @@ const UsersPage = () => {
                         <thead>
                             <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider font-semibold">
                                 <th className="px-6 py-4">Nome</th>
-                                <th className="px-6 py-4">Nível de Acesso</th>
                                 <th className="px-6 py-4">Entrou em</th>
                                 <th className="px-6 py-4 text-right">Ações</th>
                             </tr>
@@ -187,13 +186,7 @@ const UsersPage = () => {
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold ${u.role === 'ADMIN' ? 'bg-danger/10 text-danger' : 'bg-primary/10 text-primary'}`}>
-                                            {u.role === 'ADMIN' ? <FaUserShield /> : <FaUser />}
-                                            {u.role}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                                         {new Date(u.created_at).toLocaleDateString()}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -241,10 +234,6 @@ const UsersPage = () => {
                             <img src={`https://ui-avatars.com/api/?name=${currentUser.name.replace(/ /g, '+')}&background=random&size=128`} className="w-24 h-24 rounded-full shadow-md border-4 border-white z-10" alt="Avatar" />
                             <h3 className="mt-4 text-xl font-bold text-slate-800 z-10">{currentUser.name}</h3>
                             <p className="text-sm text-slate-500 z-10">{currentUser.email}</p>
-                            <span className={`mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide z-10 ${currentUser.role === 'ADMIN' ? 'bg-danger text-white shadow-sm shadow-danger/30' : 'bg-primary text-white shadow-sm shadow-primary/30'}`}>
-                                {currentUser.role === 'ADMIN' ? <FaUserShield /> : <FaUser />}
-                                {currentUser.role}
-                            </span>
                         </div>
 
                         <div className="bg-white border border-slate-100 rounded-xl divide-y divide-slate-100">
@@ -268,18 +257,9 @@ const UsersPage = () => {
                             <label>Endereço de E-mail</label>
                             <input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} required placeholder="joao@exemplo.com" />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label>Senha {editingId && <span className="text-xs text-slate-400 font-normal">(Deixe em branco para manter)</span>}</label>
-                                <input type="password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} required={!editingId} minLength="6" placeholder="••••••••" />
-                            </div>
-                            <div>
-                                <label>Nível de Acesso</label>
-                                <select value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })} required>
-                                    <option value="USER">Usuário Comum</option>
-                                    <option value="ADMIN">Administrador</option>
-                                </select>
-                            </div>
+                        <div>
+                            <label>Senha {editingId && <span className="text-xs text-slate-400 font-normal">(Deixe em branco para manter)</span>}</label>
+                            <input type="password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} required={!editingId} minLength="6" placeholder="••••••••" />
                         </div>
                         <div className="modal-footer pt-6 mt-6 border-t border-slate-100 flex justify-end gap-3 -mx-6 -mb-6 px-6 bg-slate-50 rounded-b-xl">
                             <button type="button" className="btn-secondary" onClick={() => setIsModalOpen(false)}>Cancelar</button>
