@@ -195,7 +195,7 @@ const UsersPage = () => {
                                             </div>
                                         </div>
                                     </td>
-                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                                         {new Date(u.created_at).toLocaleDateString()}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

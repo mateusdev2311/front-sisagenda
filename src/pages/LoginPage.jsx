@@ -30,6 +30,8 @@ const LoginPage = () => {
         } catch (err) {
             if (err.response && err.response.status === 401) {
                 setError('Credenciais inválidas');
+            } else if (err.response && err.response.status === 403) {
+                setError('Sistema bloqueado. Por favor, entre em contato com o suporte para verificar sua assinatura.');
             } else {
                 setError('Erro no servidor. Tente novamente mais tarde.');
             }
