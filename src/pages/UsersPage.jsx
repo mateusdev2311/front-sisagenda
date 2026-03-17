@@ -118,10 +118,19 @@ const UsersPage = () => {
             type: 'primary',
             onConfirm: async () => {
                 try {
+                    const userString = localStorage.getItem('user');
+                    const loggedUser = userString ? JSON.parse(userString) : {};
+                    const company_id = loggedUser.company_id;
+
+                    const payload = {
+                        ...formData,
+                        company_id: company_id
+                    };
+
                     if (editingId) {
-                        await axios.put(`/users/${editingId}`, formData);
+                        await axios.put(`/users/${editingId}`, payload);
                     } else {
-                        await axios.post('/users', formData);
+                        await axios.post('/users', payload);
                     }
                     setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                     setIsModalOpen(false);
