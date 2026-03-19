@@ -51,8 +51,6 @@ const SchedulesPage = () => {
         notes: '',
         billingValue: '',
         billingMethod: '',
-        notifyWhatsapp: true,
-        notifyEmail: true
     });
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', type: 'primary', onConfirm: null });
     const [isResending, setIsResending] = useState(false);
@@ -154,7 +152,7 @@ const SchedulesPage = () => {
 
     const handleOpenCreate = () => {
         setEditingId(null);
-        setFormData({ doctor_id: '', patient_id: '', date: '', notes: '', billingValue: '', billingMethod: '', notifyWhatsapp: true, notifyEmail: true });
+        setFormData({ doctor_id: '', patient_id: '', date: '', notes: '', billingValue: '', billingMethod: '' });
         setIsModalOpen(true);
     };
 
@@ -174,8 +172,6 @@ const SchedulesPage = () => {
             notes: app.notes || '',
             billingValue: '',
             billingMethod: '',
-            notifyWhatsapp: true,
-            notifyEmail: false,
             lembrete_enviado: app.lembrete_enviado || false,
             lembrete_enviado_em: app.lembrete_enviado_em || null,
         });
@@ -382,44 +378,6 @@ const SchedulesPage = () => {
                         } catch (billErr) {
                             console.error('Failed to auto-emit fast billing', billErr);
                         }
-                    }
-
-                    // -- Notificação WhatsApp via Kentro (só se o toggle estiver marcado) --
-                    if (formData.notifyWhatsapp && kentroConfig) {
-                        try {
-                            // Busca o paciente diretamente na API para garantir o contato mais atualizado
-                            const patientRes = await axios.get(`/patients/${activePatientId}`);
-                            const patient = patientRes.data;
-                            const rawPhone = patient?.number || patient?.phone; // Busca property number ou phone
-                            if (rawPhone) {
-                                // Remove tudo que não é dígito e adiciona DDI 55 se não tiver
-                                const digits = rawPhone.replace(/\D/g, '');
-                                const phone = digits.startsWith('55') ? digits : `55${digits}`;
-
-                                const apptDateFormatted = new Date(finalDateStr).toLocaleDateString('pt-BR');
-                                const apptTimeFormatted = new Date(finalDateStr).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                                const doc = doctors.find(d => String(d.id) === String(formData.doctor_id));
-                                const text = `✅ Olá, ${patient.name.split(' ')[0]}! Seu agendamento foi confirmado para o dia *${apptDateFormatted}* às *${apptTimeFormatted}* com Dr(a). *${doc?.name || 'Médico'}*. Em caso de dúvidas, entre em contato conosco.`;
-                                await sendKentroMessage({
-                                    baseUrl: kentroConfig.base_url,
-                                    apiKey: kentroConfig.api_key,
-                                    queueId: kentroConfig.queue_id,
-                                    number: phone,
-                                    text,
-                                });
-                                toast.success('Lembrete de consulta enviado via WhatsApp!', { icon: '📱' });
-                            } else {
-                                toast('Paciente sem telefone cadastrado. WhatsApp não enviado.', { icon: '⚠️' });
-                            }
-                        } catch (waErr) {
-                            console.error('Falha no disparo WhatsApp Kentro:', waErr);
-                            toast.error('Não foi possível enviar o WhatsApp.');
-                        }
-                    } else if (formData.notifyWhatsapp && !kentroConfig) {
-                        toast('Integração Kentro não configurada. Configure em Preferências.', { icon: '⚠️' });
-                    }
-                    if (formData.notifyEmail) {
-                        toast.success('Confirmação enviada para o E-mail do paciente.', { icon: '📧' });
                     }
 
                     setConfirmDialog(prev => ({ ...prev, isOpen: false }));
@@ -775,40 +733,6 @@ const SchedulesPage = () => {
                             </div>
                         </div>
                         <p className="text-[11px] text-slate-400 mt-2">* Ao preencher valor, uma fatura "Pendente" será gerada automaticamente na guia Financeiro.</p>
-                    </div>
-
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-2 mb-2">
-                        <div className="flex items-center justify-between mb-2 border-b border-slate-200 pb-2">
-                            <h5 className="font-bold text-slate-700 text-sm">Notificações Automáticas</h5>
-                            <span className="text-xs bg-primary/10 text-primary-dark px-2 py-0.5 rounded-full font-semibold">Mensageria</span>
-                        </div>
-                        <div className="flex flex-col gap-3">
-                            <label className="flex items-center gap-3 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    className="w-4 h-4 text-green-500 rounded border-slate-300 focus:ring-green-400"
-                                    checked={formData.notifyWhatsapp}
-                                    onChange={e => setFormData({ ...formData, notifyWhatsapp: e.target.checked })}
-                                />
-                                <div className="flex items-center gap-2">
-                                    <FaWhatsapp className="text-green-500 text-lg" />
-                                    <span className="text-sm font-semibold text-slate-700">Disparar lembrete via WhatsApp</span>
-                                </div>
-                            </label>
-
-                            <label className="flex items-center gap-3 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    className="w-4 h-4 text-slate-500 rounded border-slate-300 focus:ring-slate-400"
-                                    checked={formData.notifyEmail}
-                                    onChange={e => setFormData({ ...formData, notifyEmail: e.target.checked })}
-                                />
-                                <div className="flex items-center gap-2">
-                                    <FaEnvelope className="text-slate-400 text-lg" />
-                                    <span className="text-sm font-semibold text-slate-700">Enviar E-mail de confirmação e preparo</span>
-                                </div>
-                            </label>
-                        </div>
                     </div>
 
                     <div className="modal-footer flex items-center pt-6 mt-6 border-t border-slate-100 -mx-6 -mb-6 px-6 bg-slate-50 rounded-b-xl gap-3">

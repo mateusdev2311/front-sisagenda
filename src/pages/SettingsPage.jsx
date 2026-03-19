@@ -19,32 +19,51 @@ import {
 } from '../services/whatsappService';
 
 // ─── Componente Accordion ────────────────────────────────────────────────────
-const Accordion = ({ icon, title, subtitle, badge, defaultOpen = false, children }) => {
+const Accordion = ({ icon, title, subtitle, badge, defaultOpen = false, disabled = false, disabledMessage, children }) => {
     const [open, setOpen] = useState(defaultOpen);
 
     return (
-        <div className={`rounded-2xl border transition-all duration-300 ${open ? 'border-primary/30 shadow-md shadow-primary/5' : 'border-slate-100'} bg-white overflow-hidden`}>
+        <div className={`rounded-2xl border transition-all duration-300 ${
+            disabled ? 'border-slate-200 bg-slate-50 opacity-70' :
+            open ? 'border-primary/30 shadow-md shadow-primary/5 bg-white' : 'border-slate-100 bg-white'
+        } overflow-hidden`}>
             <button
                 type="button"
-                onClick={() => setOpen(o => !o)}
-                className="w-full flex items-center gap-4 px-6 py-4 text-left hover:bg-slate-50/70 transition-colors"
+                onClick={() => !disabled && setOpen(o => !o)}
+                className={`w-full flex items-center gap-4 px-6 py-4 text-left transition-colors ${
+                    disabled ? 'cursor-not-allowed' : 'hover:bg-slate-50/70'
+                }`}
             >
                 <div className="flex-shrink-0">{icon}</div>
                 <div className="flex-1 min-w-0">
-                    <span className="font-bold text-slate-800 text-sm block">{title}</span>
-                    <span className="text-xs text-slate-500 truncate block">{subtitle}</span>
+                    <span className={`font-bold text-sm block ${disabled ? 'text-slate-400' : 'text-slate-800'}`}>{title}</span>
+                    <span className="text-xs text-slate-400 truncate block">{subtitle}</span>
                 </div>
                 {badge && <div className="flex-shrink-0">{badge}</div>}
-                <FaChevronDown
-                    className={`flex-shrink-0 text-slate-400 transition-transform duration-300 ${open ? 'rotate-180' : ''}`}
-                />
+                {disabled
+                    ? <span className="text-xs text-slate-400 flex items-center gap-1 flex-shrink-0">🔒 Bloqueado</span>
+                    : <FaChevronDown className={`flex-shrink-0 text-slate-400 transition-transform duration-300 ${open ? 'rotate-180' : ''}`} />
+                }
             </button>
 
-            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${open ? 'max-h-[9999px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                <div className="px-6 pb-6 pt-2 border-t border-slate-100">
-                    {children}
+            {/* Aviso quando bloqueado */}
+            {disabled && disabledMessage && (
+                <div className="px-6 pb-4">
+                    <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+                        <span className="mt-0.5 flex-shrink-0">⚠️</span>
+                        <span>{disabledMessage}</span>
+                    </div>
                 </div>
-            </div>
+            )}
+
+            {/* Conteúdo normal (só quando não bloqueado) */}
+            {!disabled && (
+                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${open ? 'max-h-[9999px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                    <div className="px-6 pb-6 pt-2 border-t border-slate-100">
+                        {children}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -456,6 +475,8 @@ const SettingsPage = () => {
                             subtitle="Disparo automático via servidor Kentro (WhatsApp API terceirizado)"
                             badge={<StatusBadge configured={!!integrationId} label={integrationId ? 'Configurado' : 'Não configurado'} />}
                             defaultOpen={false}
+                            disabled={!!waInstance}
+                            disabledMessage="A integração via WhatsApp Próprio (Evolution API) já está ativa. Desconecte-a primeiro para usar o Kentro e evitar disparos duplicados."
                         >
                             <div className="space-y-4 pt-2">
                                 {/* Nome */}
@@ -596,6 +617,8 @@ const SettingsPage = () => {
                                     : <StatusBadge configured={false} label="Não conectado" />
                             }
                             defaultOpen={!!waInstance}
+                            disabled={!!integrationId}
+                            disabledMessage="A integração Kentro já está configurada. Desabilite-a primeiro para usar o WhatsApp Próprio e evitar disparos duplicados."
                         >
                             <div className="space-y-4 pt-2">
 
@@ -634,7 +657,6 @@ const SettingsPage = () => {
                                             </div>
                                             <div className="flex-1">
                                                 <p className={`font-bold text-sm ${currentWaStatus.color}`}>{currentWaStatus.label}</p>
-                                                <p className="text-xs text-slate-500">Instância: <code className="bg-slate-100 px-1 rounded">{waInstance.instance_name}</code></p>
                                             </div>
                                             {!waConnected && (
                                                 <button
