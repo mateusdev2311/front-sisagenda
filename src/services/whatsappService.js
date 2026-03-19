@@ -4,6 +4,20 @@
  */
 import axios from '../api/axiosConfig';
 
+/**
+ * Normaliza o número de telefone garantindo o DDI 55 (Brasil).
+ * Remove caracteres não numéricos e prefixa "55" se necessário.
+ * Ex: "11999999999" → "5511999999999"
+ *     "5511999999999" → "5511999999999"
+ * @param {string} number
+ * @returns {string}
+ */
+const normalizePhone = (number) => {
+    const digits = String(number).replace(/\D/g, '');
+    return digits.startsWith('55') ? digits : `55${digits}`;
+};
+
+
 /** Busca dados da instância da clínica no banco. */
 export const getWhatsappInstance = () =>
     axios.get('/whatsapp/instance');
@@ -29,11 +43,12 @@ export const toggleWhatsappLembrete = (lembrete_ativo) =>
 
 /**
  * Envia uma mensagem de texto via WhatsApp.
- * @param {string} number  Ex: "5511999999999"
+ * O número é normalizado automaticamente — DDI 55 é adicionado se ausente.
+ * @param {string} number  Ex: "11999999999" ou "5511999999999"
  * @param {string} text    Texto da mensagem
  */
 export const sendWhatsappMessage = (number, text) =>
-    axios.post('/whatsapp/send-message', { number, text });
+    axios.post('/whatsapp/send-message', { number: normalizePhone(number), text });
 
 /** Remove a instância da Evolution API e do banco. */
 export const deleteWhatsappInstance = () =>
