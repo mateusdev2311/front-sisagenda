@@ -255,6 +255,35 @@ const SettingsPage = () => {
         }
     };
 
+    // ─── Kentro: desabilitar (DELETE + reset) ───────────────────────────────
+    const [isDisblingKentro, setIsDisablingKentro] = useState(false);
+
+    const handleDisableKentro = async () => {
+        if (!integrationId) return;
+        if (!window.confirm('Deseja remover as configurações do Kentro? As credenciais serão apagadas.')) return;
+        setIsDisablingKentro(true);
+        try {
+            await axios.delete(`/integrations/${integrationId}`);
+            setIntegrationId(null);
+            setIntegration({
+                name: 'Kentro',
+                base_url: '',
+                api_key: '',
+                queue_id: '',
+                lembrete_ativo: false,
+                is_official_api: false,
+                whatsapp_message_text: '',
+                whatsapp_template_id: '',
+            });
+            setTestPhone('');
+            toast.success('Integração Kentro removida com sucesso.');
+        } catch {
+            toast.error('Erro ao remover integração Kentro.');
+        } finally {
+            setIsDisablingKentro(false);
+        }
+    };
+
     // ─── Kentro: salvar ───────────────────────────────────────────────────────
     const handleSaveSettings = async (e) => {
         e.preventDefault();
@@ -530,6 +559,21 @@ const SettingsPage = () => {
                                             </button>
                                         </div>
                                         <p className="text-[11px] text-green-700 mt-2">Enviará uma mensagem de confirmação simples para o número informado.</p>
+                                    </div>
+                                )}
+
+                                {/* Botão Desabilitar Kentro */}
+                                {integrationId && (
+                                    <div className="pt-2 border-t border-slate-100">
+                                        <button
+                                            type="button"
+                                            onClick={handleDisableKentro}
+                                            disabled={isDisblingKentro}
+                                            className="flex items-center gap-2 px-4 py-2 text-red-500 hover:bg-red-50 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors border border-red-200"
+                                        >
+                                            {isDisblingKentro ? <FaSpinner className="animate-spin" /> : <FaTrash />}
+                                            {isDisblingKentro ? 'Removendo...' : 'Desabilitar integração Kentro'}
+                                        </button>
                                     </div>
                                 )}
                             </div>
