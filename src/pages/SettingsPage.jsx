@@ -476,7 +476,7 @@ const SettingsPage = () => {
                             badge={<StatusBadge configured={!!integrationId} label={integrationId ? 'Configurado' : 'Não configurado'} />}
                             defaultOpen={false}
                             disabled={!!waInstance}
-                            disabledMessage="A integração via WhatsApp Próprio (Evolution API) já está ativa. Desconecte-a primeiro para usar o Kentro e evitar disparos duplicados."
+                            disabledMessage="A integração via WhatsApp Próprio já está ativa. Desconecte-a primeiro para usar o Kentro e evitar disparos duplicados."
                         >
                             <div className="space-y-4 pt-2">
                                 {/* Nome */}
@@ -607,7 +607,7 @@ const SettingsPage = () => {
                                     <FaWhatsapp className="text-emerald-600 text-xl" />
                                 </div>
                             }
-                            title="WhatsApp Próprio (Evolution API)"
+                            title="WhatsApp Próprio"
                             subtitle="Conecte o número da clínica diretamente — sem intermediários"
                             badge={
                                 waInstance
