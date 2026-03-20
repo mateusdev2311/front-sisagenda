@@ -3,6 +3,8 @@ import axios from '../api/axiosConfig';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
 import { FaPlus, FaEye, FaTrash, FaUserShield, FaUser, FaEdit, FaSearch } from 'react-icons/fa';
+import Pagination from '../components/Pagination';
+import toast from 'react-hot-toast';
 
 const UsersPage = () => {
     /**
@@ -21,6 +23,8 @@ const UsersPage = () => {
     const [formData, setFormData] = useState({ name: '', email: '', password: '' });
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', type: 'primary', onConfirm: null });
     const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 6;
 
     /**
      * Busca as contas de usuário do sistema assim que a tela carrega.
@@ -147,6 +151,18 @@ const UsersPage = () => {
         u.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    // Pagination Logic
+    const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
+    const paginatedUsers = filteredUsers.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE
+    );
+
+    // Reset to page 1 when search term changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm]);
+
     return (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 fade-in">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
@@ -184,7 +200,7 @@ const UsersPage = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {filteredUsers.map((u) => (
+                            {paginatedUsers.map((u) => (
                                 <tr key={u.id} className="hover:bg-slate-50/50 transition-colors group">
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center gap-3">
@@ -226,6 +242,11 @@ const UsersPage = () => {
                         </tbody>
                     </table>
                 </div>
+                <Pagination 
+                    currentPage={currentPage} 
+                    totalPages={totalPages} 
+                    onPageChange={(page) => setCurrentPage(page)} 
+                />
             </div>
 
             <Modal

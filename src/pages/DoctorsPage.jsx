@@ -3,6 +3,8 @@ import axios from '../api/axiosConfig';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
 import { FaPlus, FaEye, FaTrash, FaUserMd, FaEdit, FaCalendarAlt, FaSearch } from 'react-icons/fa';
+import Pagination from '../components/Pagination';
+import toast from 'react-hot-toast';
 
 const DoctorsPage = () => {
     /**
@@ -21,6 +23,8 @@ const DoctorsPage = () => {
     const [formData, setFormData] = useState({ name: '', email: '', crm: '', specialty: '', color: '#6c5be4', bio: '' });
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', type: 'primary', onConfirm: null });
     const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 6;
 
     // Schedule Management State
     const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
@@ -252,6 +256,18 @@ const DoctorsPage = () => {
         d.crm.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    // Pagination Logic
+    const totalPages = Math.ceil(filteredDoctors.length / ITEMS_PER_PAGE);
+    const paginatedDoctors = filteredDoctors.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE
+    );
+
+    // Reset to page 1 when search term changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm]);
+
     return (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 fade-in">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
@@ -291,7 +307,7 @@ const DoctorsPage = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {filteredDoctors.map((d) => (
+                            {paginatedDoctors.map((d) => (
                                 <tr key={d.id} className="hover:bg-slate-50/50 transition-colors group">
                                     <td className="px-6 py-4 relative">
                                         <div className="absolute inset-y-0 left-0 w-1 rounded-r-md" style={{ backgroundColor: d.color }}></div>
@@ -344,6 +360,11 @@ const DoctorsPage = () => {
                         </tbody>
                     </table>
                 </div>
+                <Pagination 
+                    currentPage={currentPage} 
+                    totalPages={totalPages} 
+                    onPageChange={(page) => setCurrentPage(page)} 
+                />
             </div>
 
             <Modal

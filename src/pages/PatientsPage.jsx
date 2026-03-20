@@ -5,6 +5,7 @@ import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
 import * as XLSX from 'xlsx';
 import { FaPlus, FaEye, FaTrash, FaUserInjured, FaPhone, FaEnvelope, FaEdit, FaFileUpload, FaFilePdf, FaDownload, FaSearch, FaFileImport } from 'react-icons/fa';
+import Pagination from '../components/Pagination';
 
 const PatientsPage = () => {
     /**
@@ -25,6 +26,8 @@ const PatientsPage = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [isImporting, setIsImporting] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 6;
     const fileInputRef = useRef(null);
 
     // Premium Feature: Patient Document Uploads Removed
@@ -276,6 +279,18 @@ const PatientsPage = () => {
         (p.cpf && p.cpf.includes(searchTerm))
     );
 
+    // Pagination Logic
+    const totalPages = Math.ceil(filteredPatients.length / ITEMS_PER_PAGE);
+    const paginatedPatients = filteredPatients.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE
+    );
+
+    // Reset to page 1 when search term changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm]);
+
     return (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 fade-in">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
@@ -368,7 +383,7 @@ const PatientsPage = () => {
                                         </td>
                                     </tr>
                                 ))
-                            ) : filteredPatients.map((p) => {
+                            ) : paginatedPatients.map((p) => {
                                 const age = p.birth_date ? new Date().getFullYear() - new Date(p.birth_date).getFullYear() : 'N/A';
                                 return (
                                     <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group">
@@ -428,6 +443,11 @@ const PatientsPage = () => {
                         </tbody>
                     </table>
                 </div>
+                <Pagination 
+                    currentPage={currentPage} 
+                    totalPages={totalPages} 
+                    onPageChange={(page) => setCurrentPage(page)} 
+                />
             </div>
 
             <Modal

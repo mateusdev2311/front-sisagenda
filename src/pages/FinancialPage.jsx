@@ -3,6 +3,8 @@ import axios from '../api/axiosConfig';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
 import { FaMoneyBillWave, FaSearch, FaFilter, FaFileInvoiceDollar, FaCheckCircle, FaRegClock, FaTimesCircle, FaChevronDown, FaEdit, FaTrash, FaPlus, FaChartLine } from 'react-icons/fa';
+import Pagination from '../components/Pagination';
+import toast from 'react-hot-toast';
 import Select from 'react-select';
 import { useSettings } from '../context/SettingsContext';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
@@ -28,6 +30,8 @@ const FinancialPage = () => {
     const [editingId, setEditingId] = useState(null);
     const [formData, setFormData] = useState({ appointmentId: '', patientId: '', value: '', status: 'Pendente', dueDate: '', payment_method: '' });
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', type: 'primary', onConfirm: null });
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 6;
 
     // Key Performance Indicators (KPIs)
     const [stats, setStats] = useState({ totalRevenue: 0, pendingAmount: 0, paidCount: 0 });
@@ -225,6 +229,18 @@ const FinancialPage = () => {
         return matchesStatus && matchesSearch;
     });
 
+    // Pagination Logic
+    const totalPages = Math.ceil(filteredPayments.length / ITEMS_PER_PAGE);
+    const paginatedPayments = filteredPayments.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE
+    );
+
+    // Reset to page 1 when search term changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, statusFilter]);
+
     return (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 fade-in h-4/5 flex flex-col">
             {/* Header Area */}
@@ -354,12 +370,12 @@ const FinancialPage = () => {
                                     <td colSpan="7" className="p-8 text-center text-slate-500">
                                         <div className="flex flex-col items-center justify-center">
                                             <FaMoneyBillWave className="text-4xl text-slate-300 mb-3" />
-                                            <p className="font-medium">Nenhum registro financeiro encontrado.</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : (
-                                filteredPayments.map((payment) => {
+                                    <p className="font-medium">Nenhum registro financeiro encontrado.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    ) : (
+                        paginatedPayments.map((payment) => {
                                     // Linking patient names resolving from Appts > Users.
                                     const apptId = payment.appointmentId || payment.appointment_id;
                                     const patIdFallback = payment.patientId || payment.patient_id;
@@ -409,6 +425,11 @@ const FinancialPage = () => {
                         </tbody>
                     </table>
                 </div>
+                <Pagination 
+                    currentPage={currentPage} 
+                    totalPages={totalPages} 
+                    onPageChange={(page) => setCurrentPage(page)} 
+                />
             </div>
 
             {/* Modal Forms Emissão Financeida */}
