@@ -450,7 +450,11 @@ const SchedulesPage = () => {
                                     placeholder="Selecione..."
                                     className="text-sm font-bold"
                                     classNamePrefix="react-select"
+                                    maxMenuHeight={200}
+                                    menuPlacement="auto"
+                                    menuPortalTarget={document.body}
                                     styles={{
+                                        menuPortal: (base) => ({ ...base, zIndex: 9999 }),
                                         control: (base) => ({
                                             ...base,
                                             border: 'none',
