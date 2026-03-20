@@ -3,7 +3,7 @@ import axios from '../api/axiosConfig';
 import toast from 'react-hot-toast';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
-import { FaHeartbeat, FaSearch, FaFilter, FaFileMedicalAlt, FaPrescriptionBottleAlt, FaStethoscope, FaNotesMedical, FaChevronDown, FaEdit, FaTrash, FaFilePdf, FaPlus, FaFileUpload, FaMicrophone, FaStop, FaRobot } from 'react-icons/fa';
+import { FaHeartbeat, FaSearch, FaFilter, FaFileMedicalAlt, FaPrescriptionBottleAlt, FaStethoscope, FaNotesMedical, FaChevronDown, FaEdit, FaTrash, FaFilePdf, FaPlus, FaMicrophone, FaStop, FaRobot } from 'react-icons/fa';
 import Select from 'react-select';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -41,7 +41,6 @@ const RecordsPage = () => {
     const [selectedPatientId, setSelectedPatientId] = useState('');
     const [selectedDoctorFilter, setSelectedDoctorFilter] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [attachments, setAttachments] = useState({});
     const [isLoadingRecords, setIsLoadingRecords] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const recordsPerPage = 3;
@@ -198,35 +197,6 @@ const RecordsPage = () => {
                     toast.error('Erro ao excluir prontuário');
                 }
             }
-        });
-    };
-
-    const handleFileUpload = (e, recordId) => {
-        const files = Array.from(e.target.files);
-        if (files.length === 0) return;
-
-        const maxSizeBytes = 5 * 1024 * 1024;
-        const validFiles = files.filter(f => f.size <= maxSizeBytes);
-
-        const newAttachments = validFiles.map(file => {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve({
-                    id: Date.now() + Math.random(),
-                    name: file.name,
-                    size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
-                    dataUrl: reader.result
-                });
-            });
-        });
-
-        Promise.all(newAttachments).then(results => {
-            setAttachments(prev => ({
-                ...prev,
-                [recordId]: [...(prev[recordId] || []), ...results]
-            }));
-            toast.success('Arquivo anexado com sucesso ao prontuário!');
         });
     };
 
@@ -576,25 +546,6 @@ const RecordsPage = () => {
                                                         </div>
                                                         <div className="text-slate-700 dark:text-slate-300 font-mono text-sm leading-relaxed whitespace-pre-wrap mt-2">
                                                             {r.prescription || 'Nenhum medicamento prescrito nesta consulta.'}
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* File Upload / Attachments Area */}
-                                                <div className="mt-6 pt-4 border-t border-slate-100">
-                                                    <div className="flex flex-wrap gap-4 items-center">
-                                                        <label className="cursor-pointer bg-slate-50 dark:bg-slate-800 hover:bg-primary/5 dark:hover:bg-primary/20 text-slate-600 dark:text-slate-300 hover:text-primary px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600 transition-colors text-sm font-semibold flex items-center gap-2">
-                                                            <input type="file" className="hidden" multiple onChange={(e) => handleFileUpload(e, r.id)} accept=".pdf, image/*" />
-                                                            <FaFileUpload /> Anexar Exame / Documento
-                                                        </label>
-
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {(attachments[r.id] || []).map(file => (
-                                                                <a key={file.id} href={file.dataUrl} download={file.name} className="flex items-center gap-2 bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-slate-200 transition-colors border border-slate-200">
-                                                                    <FaFilePdf className="text-danger" />
-                                                                    <span className="max-w-[120px] truncate" title={file.name}>{file.name}</span>
-                                                                </a>
-                                                            ))}
                                                         </div>
                                                     </div>
                                                 </div>
