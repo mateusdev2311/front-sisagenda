@@ -171,17 +171,35 @@ const SettingsPage = () => {
         pollingRef.current = setInterval(async () => {
             try {
                 const res = await getWhatsappStatus();
-                const { status } = res.data;
-                setWaStatus(status);
-                if (status === 'open') {
+                const { status, raw_response } = res.data || {};
+                console.log('[Polling Frontend] Status recebido do backend:', status, raw_response);
+
+                if (status) {
+                    setWaStatus(status);
+                }
+
+                // Se conectou, ou se desconectou definitivamente após tentar
+                if (status === 'open' || status === 'connected') {
                     stopPolling();
                     setWaQrCode(null);
                     setWaLoading('idle');
                     toast.success('WhatsApp conectado com sucesso! 🎉');
                     // refresh instance data
                     getWhatsappInstance().then(r => setWaInstance(r.data)).catch(() => {});
+                } else if (status === 'close') {
+                    // Parar o polling se por algum motivo a instância foi deletada ou deu erro fatal
+                    console.warn('[Polling Frontend] Instância retornou status fechado (close).');
+                    stopPolling();
+                    setWaLoading('idle');
                 }
-            } catch { /* silencioso */ }
+            } catch (err) {
+                console.error('[Polling Frontend] Erro na requisição de status:', err.response?.data || err.message);
+                // Pode parar o polling se der 404 (instância não existe no banco)
+                if (err.response?.status === 404) {
+                    stopPolling();
+                    setWaLoading('idle');
+                }
+            }
         }, 4000);
     };
 
