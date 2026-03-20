@@ -94,10 +94,12 @@ const SchedulesPage = () => {
      */
     const fetchData = async () => {
         try {
+            // Cache busting param to bypass Safari/Chrome GET cache logic
+            const t = new Date().getTime();
             const [appRes, docRes, patRes] = await Promise.all([
-                axios.get('/appointments'),
-                axios.get('/doctors'),
-                axios.get('/patients')
+                axios.get(`/appointments?t=${t}`),
+                axios.get(`/doctors?t=${t}`),
+                axios.get(`/patients?t=${t}`)
             ]);
             setAppointments(appRes.data);
             setDoctors(docRes.data);
@@ -346,12 +348,15 @@ const SchedulesPage = () => {
 
                     let savedApptId = editingId;
                     if (editingId) {
-                        await axios.put(`/appointments/${editingId}`, {
+                        const putRes = await axios.put(`/appointments/${editingId}`, {
                             doctor_id: Number(formData.doctor_id),
                             patient_id: Number(activePatientId),
                             date: finalDateStr,
                             notes: formData.notes
                         });
+                        if (putRes.data && typeof putRes.data === 'object') {
+                            setAppointments(prev => prev.map(a => String(a.id) === String(editingId) ? { ...a, ...putRes.data[1]?.[0], ...putRes.data } : a));
+                        }
                     } else {
                         const postRes = await axios.post('/appointments', {
                             doctor_id: Number(formData.doctor_id),
@@ -360,6 +365,9 @@ const SchedulesPage = () => {
                             notes: formData.notes
                         });
                         savedApptId = postRes.data?.id; // Assumes server returns inserted ID
+                        if (postRes.data) {
+                            setAppointments(prev => [...prev, postRes.data]);
+                        }
                     }
 
                     // -- Fast Billing Action (Shortcut) --
