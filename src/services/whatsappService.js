@@ -53,3 +53,7 @@ export const sendWhatsappMessage = (number, text) =>
 /** Remove a instância da Evolution API e do banco. */
 export const deleteWhatsappInstance = () =>
     axios.delete('/whatsapp/instance');
+
+/** Atualiza o template da mensagem de WhatsApp */
+export const updateWhatsappTemplate = (message_template) =>
+    axios.patch('/whatsapp/instance/template', { message_template });

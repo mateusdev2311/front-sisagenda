@@ -12,10 +12,10 @@ import {
     getWhatsappInstance,
     createWhatsappInstance,
     connectWhatsappInstance,
-    getWhatsappStatus,
     toggleWhatsappLembrete,
     sendWhatsappMessage,
     deleteWhatsappInstance,
+    updateWhatsappTemplate,
 } from '../services/whatsappService';
 
 // ─── Componente Accordion ────────────────────────────────────────────────────
@@ -112,6 +112,8 @@ const SettingsPage = () => {
     const [waLoading, setWaLoading] = useState('idle');        // idle|creating|connecting|polling|deleting|toggling|sending
     const [waTestPhone, setWaTestPhone] = useState('');
     const [waTestText, setWaTestText] = useState('Olá! Mensagem de teste enviada pelo Sisagenda. ✅');
+    const [waMessageTemplate, setWaMessageTemplate] = useState('');
+    const [isSavingWaTemplate, setIsSavingWaTemplate] = useState(false);
     const pollingRef = useRef(null);
 
     // ─── Carregamento Inicial ─────────────────────────────────────────────────
@@ -156,6 +158,7 @@ const SettingsPage = () => {
             .then(res => {
                 setWaInstance(res.data);
                 setWaStatus(res.data.status || 'close');
+                setWaMessageTemplate(res.data.message_template || '');
             })
             .catch(() => setWaInstance(null));
 
@@ -196,6 +199,7 @@ const SettingsPage = () => {
             const res = await createWhatsappInstance();
             setWaInstance(res.data.instance);
             setWaStatus('close');
+            setWaMessageTemplate(res.data.instance.message_template || '');
             toast.success('Instância criada! Aguardando conexão...');
             // já vai para o connect
             await handleConnect(res.data.instance);
@@ -253,6 +257,20 @@ const SettingsPage = () => {
             toast.error(err.response?.data?.error || 'Erro ao enviar mensagem.');
         } finally {
             setWaLoading('idle');
+        }
+    };
+
+    // ─── WhatsApp: salvar template de mensagem ───────────────────────────────
+    const handleSaveWaTemplate = async () => {
+        setIsSavingWaTemplate(true);
+        try {
+            await updateWhatsappTemplate(waMessageTemplate);
+            setWaInstance(prev => ({ ...prev, message_template: waMessageTemplate }));
+            toast.success('Template de mensagem salvo com sucesso!');
+        } catch (err) {
+            toast.error(err.response?.data?.error || 'Erro ao salvar template.');
+        } finally {
+            setIsSavingWaTemplate(false);
         }
     };
 
@@ -715,6 +733,37 @@ const SettingsPage = () => {
                                                 />
                                                 <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 peer-disabled:opacity-50"></div>
                                             </label>
+                                        </div>
+
+                                        {/* Template de Mensagem Evolution */}
+                                        <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 animate-in fade-in duration-300">
+                                            <div className="flex justify-between items-center mb-3">
+                                                <div>
+                                                    <h4 className="text-sm font-bold text-slate-800">Texto da Mensagem (Lembretes)</h4>
+                                                    <p className="text-xs text-slate-500 mt-0.5">Personalize como os seus pacientes receberão o lembrete.</p>
+                                                </div>
+                                                <button 
+                                                    type="button"
+                                                    onClick={handleSaveWaTemplate} 
+                                                    disabled={isSavingWaTemplate} 
+                                                    className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 text-white font-bold rounded shadow-sm text-xs transition-colors"
+                                                >
+                                                    {isSavingWaTemplate ? <FaSpinner className="animate-spin" /> : <FaSave />}
+                                                    {isSavingWaTemplate ? 'Salvando...' : 'Salvar Texto'}
+                                                </button>
+                                            </div>
+                                            <textarea 
+                                                className="w-full px-4 py-3 border border-slate-200 rounded-lg bg-white text-slate-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none resize-none h-24 text-sm" 
+                                                value={waMessageTemplate} 
+                                                onChange={e => setWaMessageTemplate(e.target.value)} 
+                                                placeholder="Ex: Olá {nome_paciente}! Lembramos da sua consulta com {nome_medico} marcada para o dia {data} às {hora}. Por favor, confirme sua presença." 
+                                            />
+                                            <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
+                                                Deixe em branco para usar a mensagem padrão do sistema. Tags disponíveis: <code className="bg-slate-200 px-1 py-0.5 rounded mx-1">{'{nome_paciente}'}</code>
+                                                <code className="bg-slate-200 px-1 py-0.5 rounded mx-1">{'{nome_medico}'}</code>
+                                                <code className="bg-slate-200 px-1 py-0.5 rounded mx-1">{'{data}'}</code>
+                                                <code className="bg-slate-200 px-1 py-0.5 rounded mx-1">{'{hora}'}</code>
+                                            </p>
                                         </div>
 
                                         {/* Teste de mensagem */}
