@@ -12,6 +12,7 @@ import {
     getWhatsappInstance,
     createWhatsappInstance,
     connectWhatsappInstance,
+    getWhatsappStatus,
     toggleWhatsappLembrete,
     sendWhatsappMessage,
     deleteWhatsappInstance,
