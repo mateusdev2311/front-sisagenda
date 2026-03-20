@@ -481,8 +481,8 @@ const RecordsPage = () => {
                                                                 const bill = billingRecords.find(b => String(b.appointment_id) === String(linkedApp.id));
                                                                 if (bill) {
                                                                     return (
-                                                                        <span className={`text-[10px] mt-0.5 w-fit px-1.5 py-0.5 rounded-md border font-semibold ${bill.status === 'paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-warning/10 text-amber-600 border-amber-200'}`}>
-                                                                            {bill.status === 'paid' ? '💰 Faturado' : '⏳ Pgto. Pendente'}
+                                                                        <span className={`text-[10px] mt-0.5 w-fit px-1.5 py-0.5 rounded-md border font-semibold ${(bill.status === 'paid' || bill.status === 'Pago') ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-warning/10 text-amber-600 border-amber-200'}`}>
+                                                                            {(bill.status === 'paid' || bill.status === 'Pago') ? '💰 Faturado' : '⏳ Pgto. Pendente'}
                                                                         </span>
                                                                     );
                                                                 }
