@@ -3,12 +3,13 @@ import {
     FaBuilding, FaGlobe, FaSave, FaWhatsapp, FaPlug, FaLink,
     FaPaperPlane, FaCode, FaExternalLinkAlt, FaInfoCircle,
     FaChevronDown, FaQrcode, FaTrash, FaCheckCircle, FaTimesCircle,
-    FaSpinner, FaToggleOn, FaToggleOff,
+    FaSpinner, FaToggleOn, FaToggleOff, FaBrain, FaKey,
 } from 'react-icons/fa';
 import axios from '../api/axiosConfig';
 import toast from 'react-hot-toast';
 import { useSettings } from '../context/SettingsContext';
 import ConfirmModal from '../components/ConfirmModal';
+import { saveAiToken, getCompanyInfo } from '../services/aiService';
 import {
     getWhatsappInstance,
     createWhatsappInstance,
@@ -119,6 +120,11 @@ const SettingsPage = () => {
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', type: 'primary', onConfirm: null });
     const pollingRef = useRef(null);
 
+    // ─── Integração IA (OpenAI) ───────────────────────────────────────────────
+    const [aiToken, setAiToken] = useState('');
+    const [aiConfigured, setAiConfigured] = useState(false);
+    const [isSavingAiToken, setIsSavingAiToken] = useState(false);
+
     // ─── Carregamento Inicial ─────────────────────────────────────────────────
     useEffect(() => {
         axios.get('/system-settings')
@@ -164,6 +170,13 @@ const SettingsPage = () => {
                 setWaMessageTemplate(res.data.message_template || '');
             })
             .catch(() => setWaInstance(null));
+
+        // IA — checar configuração
+        getCompanyInfo()
+            .then(res => {
+                setAiConfigured(res.data?.ai_configured || false);
+            })
+            .catch(() => {});
 
         return () => stopPolling();
     }, []);
@@ -482,6 +495,9 @@ const SettingsPage = () => {
                         </a>
                         <a href="#integrations" className="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-xl font-medium text-sm transition-colors">
                             <FaPlug className="text-lg text-slate-400" /> Integrações (APIs)
+                        </a>
+                        <a href="#ai-integrations" className="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-xl font-medium text-sm transition-colors">
+                            <FaBrain className="text-lg text-violet-400" /> IA Clínica
                         </a>
                         <a href="#localization" className="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-xl font-medium text-sm transition-colors">
                             <FaGlobe className="text-lg text-slate-400" /> Localização e Fuso
@@ -855,6 +871,81 @@ const SettingsPage = () => {
                                 )}
                             </div>
                         </Accordion>
+
+                        {/* ══════════════════ PAINEL IA (OpenAI) ══════════════════ */}
+                        <Accordion
+                            icon={
+                                <div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center flex-shrink-0">
+                                    <FaBrain className="text-violet-600 text-xl" />
+                                </div>
+                            }
+                            title="IA Clínica (OpenAI)"
+                            subtitle="Transcrição de consultas e geração automática de prontuários via Whisper + GPT-4o"
+                            badge={<StatusBadge configured={aiConfigured} label={aiConfigured ? 'Configurado' : 'Não configurado'} />}
+                            defaultOpen={false}
+                        >
+                            <div className="space-y-4 pt-2">
+                                <div className="p-4 bg-violet-50 border border-violet-100 rounded-xl">
+                                    <p className="text-sm text-violet-800 leading-relaxed">
+                                        🎙️ Com a IA ativada, médicos poderão <strong>gravar a consulta</strong> e o sistema irá gerar automaticamente a <strong>descrição clínica e a prescrição</strong> do prontuário.
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-2">
+                                        <FaKey className="text-slate-400" /> Chave da API OpenAI (sk-proj-...)
+                                    </label>
+                                    <input
+                                        type="password"
+                                        className="w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-white text-slate-900 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none font-mono text-sm"
+                                        value={aiToken}
+                                        onChange={e => setAiToken(e.target.value)}
+                                        placeholder="sk-proj-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                                        autoComplete="off"
+                                    />
+                                    <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
+                                        Obtenha sua chave em{' '}
+                                        <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-violet-600 hover:underline font-medium">
+                                            platform.openai.com/api-keys
+                                        </a>.
+                                        O token é salvo de forma segura no banco de dados da clínica.
+                                    </p>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    disabled={isSavingAiToken || !aiToken}
+                                    onClick={async () => {
+                                        setIsSavingAiToken(true);
+                                        try {
+                                            await saveAiToken(aiToken);
+                                            setAiConfigured(true);
+                                            setAiToken('');
+                                            toast.success('Token da OpenAI salvo com sucesso! A IA está ativa. 🤖');
+                                        } catch (err) {
+                                            toast.error(err.response?.data?.error || 'Erro ao salvar token da OpenAI.');
+                                        } finally {
+                                            setIsSavingAiToken(false);
+                                        }
+                                    }}
+                                    className="w-full flex items-center justify-center gap-2 py-2.5 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white font-bold rounded-lg transition-colors"
+                                >
+                                    {isSavingAiToken ? <FaSpinner className="animate-spin" /> : <FaSave />}
+                                    {isSavingAiToken ? 'Salvando...' : aiConfigured ? 'Atualizar Token da IA' : 'Ativar IA Clínica'}
+                                </button>
+
+                                {aiConfigured && (
+                                    <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-xl">
+                                        <FaCheckCircle className="text-green-500 flex-shrink-0" />
+                                        <div>
+                                            <p className="text-sm font-bold text-green-800">IA ativa e configurada</p>
+                                            <p className="text-xs text-green-600 mt-0.5">O botão "Gravar Consulta" será exibido nos prontuários médicos.</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </Accordion>
+
                     </div>
 
                     {/* Localização */}

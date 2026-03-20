@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from '../api/axiosConfig';
 import toast from 'react-hot-toast';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
-import { FaHeartbeat, FaSearch, FaFilter, FaFileMedicalAlt, FaPrescriptionBottleAlt, FaStethoscope, FaNotesMedical, FaChevronDown, FaEdit, FaTrash, FaFilePdf, FaPlus, FaFileUpload } from 'react-icons/fa';
+import { FaHeartbeat, FaSearch, FaFilter, FaFileMedicalAlt, FaPrescriptionBottleAlt, FaStethoscope, FaNotesMedical, FaChevronDown, FaEdit, FaTrash, FaFilePdf, FaPlus, FaFileUpload, FaMicrophone, FaStop, FaRobot } from 'react-icons/fa';
 import Select from 'react-select';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { useSettings } from '../context/SettingsContext';
+import { transcribeAudio, getCompanyInfo } from '../services/aiService';
 
 const CLINICAL_TEMPLATES = [
     { label: "Checkup Padrão", text: "Paciente comparece para checkup de rotina. Nega queixas agudas.\n\nPA: 120/80 mmHg\nFC: 75 bpm\n\nConduta: Solicitados exames laboratoriais de rotina." },
@@ -48,6 +49,14 @@ const RecordsPage = () => {
     // Financial Integration State
     const [billingRecords, setBillingRecords] = useState([]);
 
+    // ─── IA: Estado de Gravação de Áudio ────────────────────────────────────────────
+    const [aiConfigured, setAiConfigured] = useState(false);
+    const [isRecording, setIsRecording] = useState(false);
+    const [isTranscribing, setIsTranscribing] = useState(false);
+    const [transcriptionResult, setTranscriptionResult] = useState(null);
+    const mediaRecorderRef = useRef(null);
+    const audioChunksRef = useRef([]);
+
 
 
     /**
@@ -72,6 +81,10 @@ const RecordsPage = () => {
      */
     useEffect(() => {
         fetchInitialData();
+        // Checar se a IA está configurada
+        getCompanyInfo()
+            .then(res => setAiConfigured(res.data?.ai_configured || false))
+            .catch(() => {});
     }, []);
 
     /**
@@ -283,7 +296,52 @@ const RecordsPage = () => {
         });
     };
 
+    // ─── IA: Iniciar/Parar Gravação de Áudio ───────────────────────────────────────────
+    const handleStartRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            audioChunksRef.current = [];
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) audioChunksRef.current.push(event.data);
+            };
+            mediaRecorder.onstop = async () => {
+                stream.getTracks().forEach(track => track.stop());
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                setIsTranscribing(true);
+                setTranscriptionResult(null);
+                try {
+                    const patient = patients.find(p => String(p.id) === String(selectedPatientId));
+                    const res = await transcribeAudio(audioBlob, patient?.name || '');
+                    const { transcription, medical_record } = res.data;
+                    setTranscriptionResult(transcription);
+                    // Preencher os campos do formulário automaticamente
+                    setFormData(prev => ({
+                        ...prev,
+                        description: medical_record?.description || '',
+                        prescription: medical_record?.prescription || ''
+                    }));
+                    toast.success('Prontuário gerado pela IA! Revise e salve.');
+                } catch (err) {
+                    toast.error(err.response?.data?.error || 'Erro ao transcrever o áudio. Verifique o token da OpenAI.');
+                } finally {
+                    setIsTranscribing(false);
+                }
+            };
+            mediaRecorderRef.current = mediaRecorder;
+            mediaRecorder.start();
+            setIsRecording(true);
+        } catch {
+            toast.error('Não foi possível acessar o microfone. Verifique as permissões do navegador.');
+        }
+    };
 
+    const handleStopRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+        }
+    };
 
     /**
      * Módulo Premium: Geração e Exportação de PDF
@@ -681,6 +739,68 @@ const RecordsPage = () => {
                         />
                         <p className="text-xs text-slate-500 mt-2">Prontuários só podem ser originados através da conexão direta com um agendamento prévio (Consulta).</p>
                     </div>
+
+                    {/* ── Bloco de IA: Gravação de Consulta ── */}
+                    {aiConfigured && !editingId && (
+                        <div className="bg-violet-50 border border-violet-200 rounded-xl p-4 space-y-3 animate-in fade-in duration-300">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <FaRobot className="text-violet-600 text-lg" />
+                                    <div>
+                                        <h4 className="font-bold text-sm text-violet-800">Transcrição IA</h4>
+                                        <p className="text-[11px] text-violet-600">Grave a consulta e o prontuário será preenchido automaticamente.</p>
+                                    </div>
+                                </div>
+                                {!isRecording ? (
+                                    <button
+                                        type="button"
+                                        onClick={handleStartRecording}
+                                        disabled={isTranscribing}
+                                        className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white font-bold rounded-lg text-sm transition-colors shadow-md shadow-violet-500/20"
+                                    >
+                                        <FaMicrophone />
+                                        Gravar Consulta
+                                    </button>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={handleStopRecording}
+                                        className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg text-sm transition-colors animate-pulse shadow-md shadow-red-500/20"
+                                    >
+                                        <FaStop />
+                                        Parar Gravação
+                                    </button>
+                                )}
+                            </div>
+
+                            {isRecording && (
+                                <div className="flex items-center gap-2 text-red-600 text-xs font-semibold p-2 bg-red-50 rounded-lg border border-red-200">
+                                    <span className="w-2 h-2 bg-red-500 rounded-full animate-ping inline-block"></span>
+                                    Gravando... Fale normalmente. Clique em "Parar" quando terminar.
+                                </div>
+                            )}
+
+                            {isTranscribing && (
+                                <div className="flex items-center gap-3 text-violet-700 text-xs font-semibold p-3 bg-violet-100 rounded-lg">
+                                    <svg className="animate-spin h-4 w-4 text-violet-600" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                                    </svg>
+                                    Transcrevendo e gerando prontuário via IA... Aguarde (pode levar alguns segundos).
+                                </div>
+                            )}
+
+                            {transcriptionResult && !isTranscribing && (
+                                <div className="space-y-1">
+                                    <p className="text-[11px] font-bold text-violet-700 uppercase tracking-wider">Transcrição bruta:</p>
+                                    <div className="text-xs text-slate-600 bg-white border border-violet-100 rounded-lg p-3 max-h-24 overflow-y-auto whitespace-pre-wrap leading-relaxed">
+                                        {transcriptionResult}
+                                    </div>
+                                    <p className="text-[10px] text-violet-500 italic">Os campos abaixo foram preenchidos. Revise antes de salvar.</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div className="md:col-span-2 space-y-5">
