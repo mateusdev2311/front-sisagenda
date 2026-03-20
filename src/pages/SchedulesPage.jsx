@@ -195,6 +195,9 @@ const SchedulesPage = () => {
                 try {
                     await axios.delete(`/appointments/${id}`);
                     setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                    setIsModalOpen(false);
+                    setAppointments(prev => prev.filter(app => app.id !== id));
+                    toast.success('Consulta cancelada com sucesso!');
                     fetchData();
                 } catch (error) {
                     toast.error(error.response?.data?.error || 'Erro ao cancelar agendamento.');
