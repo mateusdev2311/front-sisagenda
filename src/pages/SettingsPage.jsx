@@ -8,6 +8,7 @@ import {
 import axios from '../api/axiosConfig';
 import toast from 'react-hot-toast';
 import { useSettings } from '../context/SettingsContext';
+import ConfirmModal from '../components/ConfirmModal';
 import {
     getWhatsappInstance,
     createWhatsappInstance,
@@ -115,6 +116,7 @@ const SettingsPage = () => {
     const [waTestText, setWaTestText] = useState('Olá! Mensagem de teste enviada pelo Sisagenda. ✅');
     const [waMessageTemplate, setWaMessageTemplate] = useState('');
     const [isSavingWaTemplate, setIsSavingWaTemplate] = useState(false);
+    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', type: 'primary', onConfirm: null });
     const pollingRef = useRef(null);
 
     // ─── Carregamento Inicial ─────────────────────────────────────────────────
@@ -295,20 +297,28 @@ const SettingsPage = () => {
 
     // ─── WhatsApp: remover instância ──────────────────────────────────────────
     const handleDeleteInstance = async () => {
-        if (!window.confirm('Tem certeza? Isso desconectará o WhatsApp da clínica.')) return;
-        setWaLoading('deleting');
-        try {
-            await deleteWhatsappInstance();
-            stopPolling();
-            setWaInstance(null);
-            setWaStatus('close');
-            setWaQrCode(null);
-            toast.success('Instância removida com sucesso.');
-        } catch (err) {
-            toast.error(err.response?.data?.error || 'Erro ao remover instância.');
-        } finally {
-            setWaLoading('idle');
-        }
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Desconectar WhatsApp',
+            message: 'Tem certeza? Isso desconectará o WhatsApp da clínica e removerá a instância.',
+            type: 'danger',
+            onConfirm: async () => {
+                setWaLoading('deleting');
+                try {
+                    await deleteWhatsappInstance();
+                    stopPolling();
+                    setWaInstance(null);
+                    setWaStatus('close');
+                    setWaQrCode(null);
+                    toast.success('Instância removida com sucesso.');
+                } catch (err) {
+                    toast.error(err.response?.data?.error || 'Erro ao remover instância.');
+                } finally {
+                    setWaLoading('idle');
+                    setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                }
+            }
+        });
     };
 
     // ─── Kentro: desabilitar (DELETE + reset) ───────────────────────────────
@@ -316,28 +326,36 @@ const SettingsPage = () => {
 
     const handleDisableKentro = async () => {
         if (!integrationId) return;
-        if (!window.confirm('Deseja remover as configurações do Kentro? As credenciais serão apagadas.')) return;
-        setIsDisablingKentro(true);
-        try {
-            await axios.delete(`/integrations/${integrationId}`);
-            setIntegrationId(null);
-            setIntegration({
-                name: 'Kentro',
-                base_url: '',
-                api_key: '',
-                queue_id: '',
-                lembrete_ativo: false,
-                is_official_api: false,
-                whatsapp_message_text: '',
-                whatsapp_template_id: '',
-            });
-            setTestPhone('');
-            toast.success('Integração Kentro removida com sucesso.');
-        } catch {
-            toast.error('Erro ao remover integração Kentro.');
-        } finally {
-            setIsDisablingKentro(false);
-        }
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Remover Kentro',
+            message: 'Deseja remover as configurações do Kentro? As credenciais serão apagadas permanentemente.',
+            type: 'danger',
+            onConfirm: async () => {
+                setIsDisablingKentro(true);
+                try {
+                    await axios.delete(`/integrations/${integrationId}`);
+                    setIntegrationId(null);
+                    setIntegration({
+                        name: 'Kentro',
+                        base_url: '',
+                        api_key: '',
+                        queue_id: '',
+                        lembrete_ativo: false,
+                        is_official_api: false,
+                        whatsapp_message_text: '',
+                        whatsapp_template_id: '',
+                    });
+                    setTestPhone('');
+                    toast.success('Integração Kentro removida com sucesso.');
+                } catch {
+                    toast.error('Erro ao remover integração Kentro.');
+                } finally {
+                    setIsDisablingKentro(false);
+                    setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                }
+            }
+        });
     };
 
     // ─── Kentro: salvar ───────────────────────────────────────────────────────
@@ -890,6 +908,14 @@ const SettingsPage = () => {
 
                 </div>
             </div>
+            <ConfirmModal
+                isOpen={confirmDialog.isOpen}
+                onClose={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={confirmDialog.onConfirm}
+                title={confirmDialog.title}
+                message={confirmDialog.message}
+                type={confirmDialog.type}
+            />
         </div>
     );
 };

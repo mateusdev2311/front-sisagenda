@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from '../api/axiosConfig';
 import toast from 'react-hot-toast';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
-import { FaPlus, FaEye, FaTrash, FaUserInjured, FaPhone, FaEnvelope, FaEdit, FaFileUpload, FaFilePdf, FaDownload, FaSearch } from 'react-icons/fa';
+import * as XLSX from 'xlsx';
+import { FaPlus, FaEye, FaTrash, FaUserInjured, FaPhone, FaEnvelope, FaEdit, FaFileUpload, FaFilePdf, FaDownload, FaSearch, FaFileImport } from 'react-icons/fa';
 
 const PatientsPage = () => {
     /**
@@ -23,6 +24,8 @@ const PatientsPage = () => {
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', type: 'primary', onConfirm: null });
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isImporting, setIsImporting] = useState(false);
+    const fileInputRef = useRef(null);
 
     // Premium Feature: Patient Document Uploads Removed
 
@@ -110,6 +113,108 @@ const PatientsPage = () => {
     };
 
     /**
+     * Lógica de Importação de Planilha XLSX
+     */
+    const handleImportClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsImporting(true);
+        const reader = new FileReader();
+
+        reader.onload = async (evt) => {
+            try {
+                const bstr = evt.target.result;
+                const wb = XLSX.read(bstr, { type: 'binary' });
+                const wsname = wb.SheetNames[0];
+                const ws = wb.Sheets[wsname];
+                const data = XLSX.utils.sheet_to_json(ws);
+
+                if (data.length === 0) {
+                    toast.error('A planilha está vazia.');
+                    return;
+                }
+
+                // Normalização e Mapeamento para os campos do Backend
+                const normalizedPatients = data.map(item => {
+                    const newItem = {};
+                    const fieldMapping = {
+                        'nome': 'name',
+                        'paciente': 'name',
+                        'telefone': 'number',
+                        'celular': 'number',
+                        'contato': 'number',
+                        'nascimento': 'birth_date',
+                        'data_nascimento': 'birth_date',
+                        'genero': 'gender',
+                        'sexo': 'gender',
+                        'endereco': 'address',
+                        'cidade': 'city',
+                        'estado': 'state',
+                        'uf': 'state',
+                        'cep': 'zip_code'
+                    };
+
+                    Object.keys(item).forEach(key => {
+                        const rawKey = key.toLowerCase().trim()
+                            .replace(/\s+/g, '_')
+                            .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Remove acentos
+                        
+                        const finalKey = fieldMapping[rawKey] || rawKey;
+                        newItem[finalKey] = item[key];
+                    });
+                    return newItem;
+                });
+
+                const res = await axios.post('/patients/bulk', { patients: normalizedPatients });
+                
+                const { imported, skipped, message } = res.data;
+                toast.success(`${message}: ${imported} importado(s), ${skipped} pulado(s).`, {
+                    duration: 5000,
+                    icon: '📊'
+                });
+
+                fetchPatients();
+            } catch (error) {
+                console.error("Import Error:", error);
+                toast.error('Erro ao processar planilha. Verifique o formato do arquivo.');
+            } finally {
+                setIsImporting(false);
+                if (fileInputRef.current) fileInputRef.current.value = '';
+            }
+        };
+
+        reader.readAsBinaryString(file);
+    };
+
+    const handleDownloadTemplate = () => {
+        const templateData = [
+            {
+                'Nome': 'Exemplo Silva',
+                'CPF': '000.000.000-00',
+                'Telefone': '5511999999999',
+                'Email': 'exemplo@email.com',
+                'Data Nascimento': '01/01/1990',
+                'Genero': 'Masculino',
+                'Endereco': 'Rua Exemplo, 123',
+                'Cidade': 'São Paulo',
+                'Estado': 'SP',
+                'CEP': '01001-000'
+            }
+        ];
+
+        const ws = XLSX.utils.json_to_sheet(templateData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Modelo Importação");
+        XLSX.writeFile(wb, "modelo_pacientes_sisagenda.xlsx");
+        toast.success('Modelo pronto! Siga o formato das colunas.');
+    };
+
+    /**
      * API: POST /patients
      * Cria um novo registro de paciente.
      * Payload (Corpo enviado) baseado no `formData`: 
@@ -191,6 +296,29 @@ const PatientsPage = () => {
                             placeholder="Buscar por nome, e-mail ou CPF..."
                         />
                     </div>
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        accept=".xlsx, .xls"
+                        className="hidden"
+                    />
+                    <button 
+                        className="btn-secondary flex items-center gap-2" 
+                        onClick={handleDownloadTemplate}
+                        title="Baixar Planilha de Exemplo"
+                    >
+                        <FaDownload className="text-sm" /> 
+                        <span className="hidden lg:inline">Baixar Modelo</span>
+                    </button>
+                    <button 
+                        className="btn-secondary flex items-center gap-2" 
+                        onClick={handleImportClick}
+                        disabled={isImporting}
+                    >
+                        {isImporting ? <FaFileUpload className="animate-spin" /> : <FaFileImport />}
+                        {isImporting ? 'Importando...' : 'Importar Planilha'}
+                    </button>
                     <button className="btn-primary" onClick={handleOpenCreate}>
                         <FaPlus className="text-sm" /> Novo Paciente
                     </button>
