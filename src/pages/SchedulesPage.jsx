@@ -3,7 +3,8 @@ import axios from '../api/axiosConfig';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
 import Select from 'react-select';
-import { FaPlus, FaChevronLeft, FaChevronRight, FaCalendarCheck, FaMoneyBillWave, FaWhatsapp, FaEnvelope, FaPaperPlane, FaUserMd } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
+import { FaPlus, FaChevronLeft, FaChevronRight, FaCalendarCheck, FaMoneyBillWave, FaWhatsapp, FaEnvelope, FaPaperPlane, FaUserMd, FaPlay } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import { sendKentroMessage } from '../services/kentroService';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
@@ -34,6 +35,7 @@ for (let h = 7; h <= 21; h++) {
 }
 
 const SchedulesPage = () => {
+    const navigate = useNavigate();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [view, setView] = useState('month');
     const [appointments, setAppointments] = useState([]);
@@ -228,6 +230,27 @@ const SchedulesPage = () => {
         } finally {
             setIsResending(false);
         }
+    };
+
+    /**
+     * Inicia a consulta redirecionando para a tela de prontuários
+     * e salvando o estado no localStorage para o timer
+     */
+    const handleStartConsultation = () => {
+        if (!editingId || !formData.patient_id) {
+            toast.error('É necessário ter um paciente agendado para iniciar o atendimento.');
+            return;
+        }
+        
+        const consultationData = {
+            appointmentId: editingId,
+            patientId: formData.patient_id,
+            doctorId: formData.doctor_id,
+            startTime: Date.now()
+        };
+        
+        localStorage.setItem('activeConsultation', JSON.stringify(consultationData));
+        navigate('/records');
     };
 
 
@@ -764,6 +787,15 @@ const SchedulesPage = () => {
                                 >
                                     <FaPaperPlane className={isResending ? 'animate-pulse' : ''} />
                                     {isResending ? 'Enviando...' : 'Reenviar Lembrete'}
+                                </button>
+                            )}
+                            {editingId && (
+                                <button
+                                    type="button"
+                                    onClick={handleStartConsultation}
+                                    className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-lg transition-colors border border-primary/20 text-sm"
+                                >
+                                    <FaPlay className="text-[10px]" /> Iniciar Atendimento
                                 </button>
                             )}
                             <button type="button" className="btn-secondary" onClick={() => setIsModalOpen(false)}>Cancelar</button>
