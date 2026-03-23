@@ -71,9 +71,9 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                                 </NavLink>
                             </li>
                             <li>
-                                <NavLink to="/doctors" className={linkClass} title="Equipe Médica">
+                                <NavLink to="/doctors" className={linkClass} title="Profissionais">
                                     <FaUserMd className={`text-lg opacity-80 ${isCollapsed ? 'mx-auto' : ''}`} /> 
-                                    {!isCollapsed && <span>Equipe Médica</span>}
+                                    {!isCollapsed && <span>Profissionais</span>}
                                 </NavLink>
                             </li>
 
@@ -126,8 +126,8 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
             <div className={`p-4 border-t border-slate-200 flex ${isCollapsed ? 'justify-center' : 'justify-between'} items-center transition-all duration-300`}>
                 {!isCollapsed && (
                     <div className="flex flex-col">
-                        <span className="text-xs font-bold text-slate-700">Sisagendamento Pro</span>
-                        <span className="text-[10px] text-slate-400 font-medium">v2.0</span>
+                        <span className="text-xs font-bold text-slate-700">Sisagenda</span>
+                        <span className="text-[10px] text-slate-400 font-medium">v2.5</span>
                     </div>
                 )}
                 <button 
