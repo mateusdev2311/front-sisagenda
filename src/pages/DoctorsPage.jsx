@@ -24,6 +24,7 @@ const DoctorsPage = () => {
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', type: 'primary', onConfirm: null });
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
+    const [companyPlan, setCompanyPlan] = useState('free');
     const ITEMS_PER_PAGE = 6;
 
     // Schedule Management State
@@ -39,6 +40,7 @@ const DoctorsPage = () => {
      */
     useEffect(() => {
         fetchDoctors();
+        axios.get('/company/me').then(res => setCompanyPlan(res.data?.plan || 'free')).catch(() => setCompanyPlan('free'));
     }, []);
 
     /**
@@ -57,6 +59,15 @@ const DoctorsPage = () => {
     };
 
     const handleOpenCreate = () => {
+        if (companyPlan === 'free' && doctors.length >= 1) {
+            toast.error('Limite de profissionais atingido para o plano Free (Máx: 1). Faça o upgrade para adicionar mais médicos.', { duration: 5000 });
+            return;
+        }
+        if (companyPlan === 'start' && doctors.length >= 5) {
+            toast.error('Limite de profissionais atingido para o plano Start (Máx: 5). Faça o upgrade para o plano Pro.', { duration: 5000 });
+            return;
+        }
+
         setIsViewing(false);
         setEditingId(null);
         setCurrentDoctor(null);
@@ -288,8 +299,12 @@ const DoctorsPage = () => {
                             placeholder="Buscar por nome, especialidade ou CRM..."
                         />
                     </div>
-                    <button className="btn-primary" onClick={handleOpenCreate}>
-                        <FaPlus className="text-sm" /> Novo Médico
+                    <button 
+                        className={`btn-primary flex items-center gap-2 ${((companyPlan === 'free' && doctors.length >= 1) || (companyPlan === 'start' && doctors.length >= 5)) ? 'opacity-80' : ''}`}
+                        onClick={handleOpenCreate}
+                    >
+                        {((companyPlan === 'free' && doctors.length >= 1) || (companyPlan === 'start' && doctors.length >= 5)) ? <span className="text-xs">🔒</span> : <FaPlus className="text-sm" />} 
+                        Novo Médico
                     </button>
                 </div>
             </div>

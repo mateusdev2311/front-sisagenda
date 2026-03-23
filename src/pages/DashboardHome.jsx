@@ -28,6 +28,7 @@ const DashboardHome = () => {
     const [allPatients, setAllPatients]         = useState([]);
     const [allBillings, setAllBillings]         = useState([]);
     const [allRecords, setAllRecords]           = useState([]);
+    const [companyPlan, setCompanyPlan]         = useState('free');
     const [loading, setLoading]                 = useState(true);
 
     useEffect(() => {
@@ -40,12 +41,14 @@ const DashboardHome = () => {
                     axios.get('/patients'),
                     axios.get('/billing'),
                     axios.get('/records'),
+                    axios.get('/company/me').catch(() => ({ data: { plan: 'free' } }))
                 ]);
                 setAllAppointments(a.data || []);
                 setAllDoctors(d.data || []);
                 setAllPatients(p.data || []);
                 setAllBillings(b.data || []);
                 setAllRecords(Array.isArray(r.data) ? r.data : []);
+                setCompanyPlan(c.data?.plan || 'free');
             } catch (e) { console.error(e); }
             setLoading(false);
         };
@@ -205,23 +208,30 @@ const DashboardHome = () => {
                 </div>
 
                 {/* Date selector */}
-                <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-1 py-1 shadow-sm">
-                    <button onClick={() => shiftDate(-1)} className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors">
+                <div className={`flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-1 py-1 shadow-sm relative group ${companyPlan === 'free' ? 'opacity-70 cursor-not-allowed' : ''}`}>
+                    {companyPlan === 'free' && (
+                        <div className="absolute left-1/2 -top-10 -translate-x-1/2 w-48 bg-slate-800 text-white text-xs p-2 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center pointer-events-none">
+                            Filtro de datas exclusivo a partir do plano Start.
+                            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-800 rotate-45"></div>
+                        </div>
+                    )}
+                    <button onClick={() => shiftDate(-1)} disabled={companyPlan === 'free'} className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
                         <FaChevronLeft className="text-xs" />
                     </button>
                     <div className="flex items-center gap-2 px-1">
                         <input
                             type="date"
                             value={selectedDate}
+                            disabled={companyPlan === 'free'}
                             onChange={e => setSelectedDate(e.target.value)}
-                            className="border-none outline-none bg-transparent text-sm font-bold text-slate-700 cursor-pointer"
+                            className="border-none outline-none bg-transparent text-sm font-bold text-slate-700 cursor-pointer disabled:cursor-not-allowed"
                             max={toLocalYYYYMMDD(new Date())}
                         />
                         {isToday && (
                             <span className="text-[10px] font-bold bg-primary text-white px-2 py-0.5 rounded-full">Hoje</span>
                         )}
                     </div>
-                    <button onClick={() => shiftDate(1)} disabled={isToday} className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors disabled:opacity-30">
+                    <button onClick={() => shiftDate(1)} disabled={isToday || companyPlan === 'free'} className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
                         <FaChevronRight className="text-xs" />
                     </button>
                 </div>

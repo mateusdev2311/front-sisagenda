@@ -547,7 +547,21 @@ const SettingsPage = () => {
                                 
                                 <div className="mt-6 pt-6 border-t border-slate-100 flex items-center justify-between bg-slate-50/50 p-4 rounded-xl border border-slate-200">
                                     <div>
-                                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Plano Atual</p>
+                                        <div className="relative group flex items-center gap-1 mb-1">
+                                            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Plano Atual</p>
+                                            <FaInfoCircle className="text-slate-400 hover:text-primary cursor-help text-xs" />
+                                            
+                                            {/* Tooltip Popup */}
+                                            <div className="absolute left-0 bottom-full mb-2 w-72 bg-slate-800 text-white text-xs p-3 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
+                                                <p className="font-bold mb-2 text-slate-200 border-b border-slate-700 pb-1">O que cada plano oferece?</p>
+                                                <ul className="space-y-2">
+                                                    <li><span className="font-bold text-slate-300">Free:</span> 1 Profissional, Visão Geral Diária</li>
+                                                    <li><span className="font-bold text-emerald-400">Start:</span> Até 5 Profissionais, WhatsApp Próprio, Dashboard Avançado</li>
+                                                    <li><span className="font-bold text-indigo-400">Pro:</span> Ilimitado, IA Clínica, Integração Kentro, Multi-gestão</li>
+                                                </ul>
+                                                <div className="absolute -bottom-1 left-4 w-2 h-2 bg-slate-800 rotate-45"></div>
+                                            </div>
+                                        </div>
                                         <div className="flex items-center gap-2">
                                             <span className={`px-3 py-1 text-xs font-bold uppercase rounded-lg shadow-sm border ${
                                                 companyInfo.plan === 'pro' ? 'bg-indigo-50 border-indigo-200 text-indigo-700' :
@@ -587,8 +601,8 @@ const SettingsPage = () => {
                             subtitle="Disparo automático via servidor Kentro (WhatsApp API terceirizado)"
                             badge={<StatusBadge configured={!!integrationId} label={integrationId ? 'Configurado' : 'Não configurado'} />}
                             defaultOpen={false}
-                            disabled={!!waInstance}
-                            disabledMessage="A integração via WhatsApp Próprio já está ativa. Desconecte-a primeiro para usar o Kentro e evitar disparos duplicados."
+                            disabled={companyInfo.plan !== 'pro' || !!waInstance}
+                            disabledMessage={companyInfo.plan !== 'pro' ? "A integração Kentro API é um recurso exclusivo do plano PRO. Faça o upgrade para liberar os envios em massa." : "A integração via WhatsApp Próprio já está ativa. Desconecte-a primeiro para usar o Kentro e evitar disparos duplicados."}
                         >
                             <div className="space-y-4 pt-2">
                                 {/* Nome */}
@@ -729,8 +743,8 @@ const SettingsPage = () => {
                                     : <StatusBadge configured={false} label="Não conectado" />
                             }
                             defaultOpen={!!waInstance}
-                            disabled={!!integrationId}
-                            disabledMessage="A integração Kentro já está configurada. Desabilite-a primeiro para usar o WhatsApp Próprio e evitar disparos duplicados."
+                            disabled={companyInfo.plan === 'free' || !!integrationId}
+                            disabledMessage={companyInfo.plan === 'free' ? "A integração do WhatsApp Próprio está disponível a partir do plano Start." : "A integração Kentro já está configurada. Desabilite-a primeiro para usar o WhatsApp Próprio e evitar disparos duplicados."}
                         >
                             <div className="space-y-4 pt-2">
 
@@ -924,6 +938,8 @@ const SettingsPage = () => {
                             subtitle="Transcrição de consultas e geração automática de prontuários via Whisper + GPT-4o"
                             badge={<StatusBadge configured={aiConfigured} label={aiConfigured ? 'Configurado' : 'Não configurado'} />}
                             defaultOpen={false}
+                            disabled={companyInfo.plan !== 'pro'}
+                            disabledMessage="A IA Clínica é um recurso premium exclusivo do plano PRO. Faça o upgrade para automatizar os prontuários da sua clínica!"
                         >
                             <div className="space-y-4 pt-2">
                                 <div className="p-4 bg-violet-50 border border-violet-100 rounded-xl">
