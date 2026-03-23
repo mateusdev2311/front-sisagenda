@@ -12,6 +12,7 @@ import FinancialPage from './pages/FinancialPage';
 import SettingsPage from './pages/SettingsPage';
 import AdminCompaniesPage from './pages/AdminCompaniesPage';
 import AtendimentosPage from './pages/AtendimentosPage';
+import LandingPage from './pages/LandingPage';
 import './index.css';
 import './api/axiosConfig';
 
@@ -36,6 +37,9 @@ function App() {
   return (
     <Router>
       <Routes>
+        {/* Landing Page (public) */}
+        <Route path="/" element={<LandingPage />} />
+
         {/* Public Auth Routes */}
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<LoginPage />} />
@@ -57,7 +61,7 @@ function App() {
         </Route>
 
         {/* Fallback */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );
