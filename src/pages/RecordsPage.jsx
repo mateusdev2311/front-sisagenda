@@ -3,7 +3,7 @@ import axios from '../api/axiosConfig';
 import toast from 'react-hot-toast';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
-import { FaHeartbeat, FaSearch, FaFilter, FaFileMedicalAlt, FaPrescriptionBottleAlt, FaStethoscope, FaNotesMedical, FaChevronDown, FaEdit, FaTrash, FaFilePdf, FaPlus, FaMicrophone, FaStop, FaRobot, FaPlay, FaClock } from 'react-icons/fa';
+import { FaHeartbeat, FaSearch, FaFilter, FaFileMedicalAlt, FaPrescriptionBottleAlt, FaStethoscope, FaNotesMedical, FaChevronDown, FaEdit, FaTrash, FaFilePdf, FaPlus, FaMicrophone, FaStop, FaRobot } from 'react-icons/fa';
 import Select from 'react-select';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -56,55 +56,6 @@ const RecordsPage = () => {
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
 
-    // ─── Timer de Consulta Ativa ──────────────────────────────────────────────────
-    const [activeConsultation, setActiveConsultation] = useState(null);
-    const [consultationTime, setConsultationTime] = useState(0);
-
-    const formatTime = (seconds) => {
-        const hrs = Math.floor(seconds / 3600);
-        const mins = Math.floor((seconds % 3600) / 60);
-        const secs = seconds % 60;
-        if (hrs > 0) return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-        return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-    };
-
-    useEffect(() => {
-        const saved = localStorage.getItem('activeConsultation');
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                setActiveConsultation(parsed);
-                if (!selectedPatientId) {
-                    setSelectedPatientId(parsed.patientId);
-                }
-            } catch (e) {
-                console.error("Error parsing consultation timer", e);
-            }
-        }
-    }, []);
-
-    useEffect(() => {
-        let interval;
-        if (activeConsultation) {
-            // Conta imediatamente o offset
-            setConsultationTime(Math.floor((Date.now() - activeConsultation.startTime) / 1000));
-            interval = setInterval(() => {
-                setConsultationTime(Math.floor((Date.now() - activeConsultation.startTime) / 1000));
-            }, 1000);
-        }
-        return () => clearInterval(interval);
-    }, [activeConsultation]);
-
-    const handleFinishConsultation = () => {
-        handleOpenCreate();
-        setTimeout(() => {
-            setFormData(prev => ({
-                ...prev,
-                appointmentId: activeConsultation.appointmentId,
-                description: prev.description ? `${prev.description}\n\n[Sistema] Duração da consulta: ${formatTime(consultationTime)}.` : `[Sistema] Duração da consulta: ${formatTime(consultationTime)}.\n\n`
-            }));
-        }, 100);
-    };
 
 
 
@@ -277,8 +228,7 @@ const RecordsPage = () => {
                     const payload = {
                         appointmentId: appId,
                         description: formData.description,
-                        prescription: formData.prescription,
-                        duration_seconds: consultationTime || 0
+                        prescription: formData.prescription
                     };
 
                     if (editingId) {
@@ -307,11 +257,6 @@ const RecordsPage = () => {
                         }
                     }
 
-                    // Se esse prontuário é referente à consulta ativa, limpa o timer
-                    if (activeConsultation && String(activeConsultation.appointmentId) === String(appId)) {
-                        localStorage.removeItem('activeConsultation');
-                        setActiveConsultation(null);
-                    }
 
                     setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                     setIsModalOpen(false);
@@ -428,25 +373,6 @@ const RecordsPage = () => {
                 </div>
             </div>
 
-            {activeConsultation && (
-                <div className="bg-violet-600 text-white rounded-2xl shadow-lg p-4 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in slide-in-from-top-4 duration-500">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center animate-pulse">
-                            <FaClock className="text-2xl" />
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-lg tracking-tight">Atendimento em Andamento</h3>
-                            <p className="text-violet-200 text-sm font-medium">Tempo decorrido: <span className="font-mono text-base ml-1">{formatTime(consultationTime)}</span></p>
-                        </div>
-                    </div>
-                    <button 
-                        onClick={handleFinishConsultation}
-                        className="bg-white hover:bg-slate-50 text-violet-700 font-bold py-2.5 px-6 rounded-xl shadow-sm transition-transform hover:scale-105 flex items-center gap-2"
-                    >
-                        <FaFileMedicalAlt /> Preencher Prontuário
-                    </button>
-                </div>
-            )}
 
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-700 p-6 flex flex-col items-center justify-center min-h-[150px] bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-800">
                 <label className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-3">Pesquisar Arquivo do Paciente</label>
