@@ -20,10 +20,12 @@ const LoginPage = () => {
 
             if (response.data && response.data.token) {
                 localStorage.setItem('token', response.data.token);
-                if (response.data.userReturn) {
-                    localStorage.setItem('user', JSON.stringify(response.data.userReturn));
+                const userReturn = response.data.userReturn;
+                if (userReturn) {
+                    localStorage.setItem('user', JSON.stringify(userReturn));
                 }
-                navigate('/');
+                // Redirect based on role — '/' now shows the landing page
+                navigate(userReturn?.is_super_admin ? '/admin/clinicas' : '/home');
             } else {
                 setError('Login failed: No token received.');
             }
