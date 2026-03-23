@@ -28,9 +28,11 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                         className="h-32 w-auto object-contain transition-all duration-300"
                     />
                 ) : (
-                    <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary font-bold text-xl shadow-sm">
-                        S
-                    </div>
+                    <img
+                        src="/logosidebar.png"
+                        alt="Sisagenda Logo"
+                        className="w-10 h-10 object-contain transition-all duration-300"
+                    />
                 )}
             </div>
 
