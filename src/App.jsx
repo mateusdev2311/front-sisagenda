@@ -11,6 +11,7 @@ import RecordsPage from './pages/RecordsPage';
 import FinancialPage from './pages/FinancialPage';
 import SettingsPage from './pages/SettingsPage';
 import AdminCompaniesPage from './pages/AdminCompaniesPage';
+import AtendimentosPage from './pages/AtendimentosPage';
 import './index.css';
 import './api/axiosConfig';
 
@@ -48,6 +49,7 @@ function App() {
           <Route path="/doctors" element={<DoctorsPage />} />
           <Route path="/patients" element={<PatientsPage />} />
           <Route path="/schedules" element={<SchedulesPage />} />
+          <Route path="/atendimentos" element={<AtendimentosPage />} />
           <Route path="/records" element={<RecordsPage />} />
           <Route path="/financial" element={<FinancialPage />} />
           <Route path="/settings" element={<SettingsPage />} />

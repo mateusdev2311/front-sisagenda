@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { FaHeartbeat, FaTachometerAlt, FaUsers, FaUserMd, FaUserInjured, FaCalendarAlt, FaFileMedicalAlt, FaCog, FaBuilding } from 'react-icons/fa';
+import { FaHeartbeat, FaTachometerAlt, FaUsers, FaUserMd, FaUserInjured, FaCalendarAlt, FaFileMedicalAlt, FaCog, FaBuilding, FaStethoscope } from 'react-icons/fa';
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
 
@@ -74,6 +74,12 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                             <li>
                                 <NavLink to="/schedules" className={linkClass}>
                                     <FaCalendarAlt className="text-lg opacity-80" /> <span>Agendamentos</span>
+                                </NavLink>
+                            </li>
+                            <li>
+                                <NavLink to="/atendimentos" className={linkClass}>
+                                    <FaStethoscope className="text-lg opacity-80" />
+                                    <span>Sala de Atendimento</span>
                                 </NavLink>
                             </li>
                             <li>

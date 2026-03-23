@@ -3,7 +3,7 @@ import axios from '../api/axiosConfig';
 import toast from 'react-hot-toast';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
-import { FaHeartbeat, FaSearch, FaFilter, FaFileMedicalAlt, FaPrescriptionBottleAlt, FaStethoscope, FaNotesMedical, FaChevronDown, FaEdit, FaTrash, FaFilePdf, FaPlus, FaMicrophone, FaStop, FaRobot } from 'react-icons/fa';
+import { FaHeartbeat, FaSearch, FaFilter, FaFileMedicalAlt, FaPrescriptionBottleAlt, FaStethoscope, FaNotesMedical, FaChevronDown, FaEdit, FaTrash, FaFilePdf, FaPlus, FaMicrophone, FaStop, FaRobot, FaClock } from 'react-icons/fa';
 import Select from 'react-select';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -509,6 +509,19 @@ const RecordsPage = () => {
                                                                     Consulta do dia: {new Date(linkedApp.date).toLocaleDateString('pt-BR')} às {String(new Date(linkedApp.date).getHours()).padStart(2, '0')}:{String(new Date(linkedApp.date).getMinutes()).padStart(2, '0')}
                                                                 </span>
                                                             )}
+                                                            {(r.duration_seconds > 0) && (() => {
+                                                                const hrs = Math.floor(r.duration_seconds / 3600);
+                                                                const mins = Math.floor((r.duration_seconds % 3600) / 60);
+                                                                const secs = r.duration_seconds % 60;
+                                                                const fmt = hrs > 0
+                                                                    ? `${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`
+                                                                    : `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+                                                                return (
+                                                                    <span className="text-[10px] mt-0.5 w-fit px-1.5 py-0.5 rounded-md border bg-teal-50 text-teal-700 border-teal-200 font-semibold flex items-center gap-1">
+                                                                        <FaClock className="text-teal-400" /> Duração: {fmt}
+                                                                    </span>
+                                                                );
+                                                            })()}
                                                             {linkedApp && (() => {
                                                                 const bill = billingRecords.find(b => String(b.appointment_id) === String(linkedApp.id));
                                                                 if (bill) {

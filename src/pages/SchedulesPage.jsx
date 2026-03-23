@@ -34,6 +34,82 @@ for (let h = 7; h <= 21; h++) {
     if (h !== 21) TIME_SLOTS.push(`${String(h).padStart(2, '0')}:30`);
 }
 
+const FloatingConsultationPanel = ({ activeConsultations, patients, doctors, records, getElapsedSeconds, formatTime, onFinalize }) => {
+    const [expanded, setExpanded] = useState(false);
+
+    if (!expanded) {
+        return (
+            <button
+                onClick={() => setExpanded(true)}
+                className="fixed bottom-5 right-5 z-50 w-14 h-14 rounded-full bg-slate-800 text-white shadow-2xl flex flex-col items-center justify-center gap-0.5 transition-all hover:scale-110 group"
+                title="Expandir Sala de Atendimento"
+            >
+                <FaClock className="text-base group-hover:scale-110 transition-transform" />
+                <span className="text-[10px] font-bold bg-emerald-400 text-slate-900 rounded-full min-w-[18px] text-center leading-tight px-1">
+                    {activeConsultations.length}
+                </span>
+            </button>
+        );
+    }
+
+    return (
+        <div className="fixed bottom-5 right-5 z-50 w-[340px] rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden" style={{ boxShadow: '0 8px 32px rgba(15,23,42,0.14)' }}>
+            {/* Header */}
+            <div className="bg-slate-800 px-4 py-2.5 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span className="text-white font-bold text-xs uppercase tracking-widest">Sala de Atendimento</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="bg-white/10 text-slate-300 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                        {activeConsultations.length} {activeConsultations.length === 1 ? 'Paciente' : 'Pacientes'}
+                    </span>
+                    <button
+                        onClick={() => setExpanded(false)}
+                        className="ml-1 w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors text-xs"
+                        title="Minimizar"
+                    >
+                        &#8211;
+                    </button>
+                </div>
+            </div>
+            {/* Rows */}
+            <div className="divide-y divide-slate-100 max-h-[350px] overflow-y-auto">
+                {activeConsultations.map((c) => {
+                    const pat = patients.find(p => String(p.id) === String(c.patientId));
+                    const doc = doctors.find(d => String(d.id) === String(c.doctorId));
+                    const elapsed = getElapsedSeconds(c.startTime);
+                    const hasRecord = records.some(r => String(r.appointmentId || r.appointment_id) === String(c.appointmentId));
+                    return (
+                        <div key={c.appointmentId} className="flex items-center gap-3 px-4 py-3">
+                            <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: doc?.color || '#6c5be4' }}>
+                                {pat?.name?.charAt(0) || '?'}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="font-bold text-slate-800 text-xs truncate leading-tight">{pat?.name || 'Paciente'}</p>
+                                <p className="text-[10px] text-slate-400 leading-tight">Dr. {doc?.name?.replace('Dr. ', '') || '—'}</p>
+                            </div>
+                            <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 rounded-lg px-2 py-1 flex-shrink-0">
+                                {formatTime(elapsed)}
+                            </span>
+                            {hasRecord ? (
+                                <span className="text-[10px] font-bold text-emerald-600 px-2 py-1 bg-emerald-50 rounded-lg border border-emerald-100 flex-shrink-0">✓</span>
+                            ) : (
+                                <button
+                                    onClick={() => onFinalize(c)}
+                                    className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg text-[11px] transition-all hover:scale-105 flex-shrink-0"
+                                >
+                                    <FaFileMedicalAlt className="text-[9px]" /> Finalizar
+                                </button>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
 const SchedulesPage = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [view, setView] = useState('month');
@@ -44,9 +120,10 @@ const SchedulesPage = () => {
     const [selectedDoctorFilter, setSelectedDoctorFilter] = useState('all');
     const [kentroConfig, setKentroConfig] = useState(null); // { base_url, api_key, queue_id }
 
-    const [activeConsultation, setActiveConsultation] = useState(null);
-    const [consultationTime, setConsultationTime] = useState(0);
+    const [activeConsultations, setActiveConsultations] = useState([]); // Array of { appointmentId, patientId, doctorId, startTime }
+    const [currentTick, setCurrentTick] = useState(0); // Forces re-render every second for live timers
     const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
+    const [recordingConsultation, setRecordingConsultation] = useState(null); // which consultation we’re filling the record for
     const [recordData, setRecordData] = useState({ description: '', prescription: '' });
 
     // AI Variables
@@ -66,26 +143,24 @@ const SchedulesPage = () => {
     };
 
     useEffect(() => {
-        const saved = localStorage.getItem('activeConsultation');
+        const saved = localStorage.getItem('activeConsultations');
         if (saved) {
             try {
-                setActiveConsultation(JSON.parse(saved));
+                setActiveConsultations(JSON.parse(saved));
             } catch (e) {
-                console.error("Error parsing consultation timer", e);
+                console.error("Error parsing active consultations", e);
             }
         }
     }, []);
 
+    // Ticks every second to keep timers live
     useEffect(() => {
-        let interval;
-        if (activeConsultation) {
-            setConsultationTime(Math.floor((Date.now() - activeConsultation.startTime) / 1000));
-            interval = setInterval(() => {
-                setConsultationTime(Math.floor((Date.now() - activeConsultation.startTime) / 1000));
-            }, 1000);
-        }
+        if (activeConsultations.length === 0) return;
+        const interval = setInterval(() => setCurrentTick(t => t + 1), 1000);
         return () => clearInterval(interval);
-    }, [activeConsultation]);
+    }, [activeConsultations.length]);
+
+    const getElapsedSeconds = (startTime) => Math.floor((Date.now() - startTime) / 1000);
 
     const handleStartRecording = async () => {
         try {
@@ -101,15 +176,13 @@ const SchedulesPage = () => {
                 setIsTranscribing(true);
                 setTranscriptionResult(null);
                 try {
-                    const patientName = patients.find(p => String(p.id) === String(activeConsultation?.patientId))?.name || 'Paciente';
+                    const patientName = patients.find(p => String(p.id) === String(recordingConsultation?.patientId))?.name || 'Paciente';
                     const res = await transcribeAudio(audioBlob, patientName);
                     const { transcription, medical_record } = res.data;
                     setTranscriptionResult(transcription);
                     setRecordData(prev => ({
                         ...prev,
-                        description: prev.description 
-                            ? `${medical_record?.description}\n\n${prev.description}`
-                            : `${medical_record?.description}\n\n[Sistema] Duração da consulta: ${formatTime(consultationTime)}.`,
+                        description: medical_record?.description || prev.description,
                         prescription: medical_record?.prescription || prev.prescription
                     }));
                     toast.success('Prontuário gerado pela IA! Revise e salve.');
@@ -136,17 +209,23 @@ const SchedulesPage = () => {
 
     const handleSaveRecord = async (e) => {
         e.preventDefault();
+        if (!recordingConsultation) return;
+        const elapsed = getElapsedSeconds(recordingConsultation.startTime);
         try {
             await axios.post('/appointments/records', {
-                appointmentId: activeConsultation.appointmentId,
+                appointmentId: recordingConsultation.appointmentId,
                 description: recordData.description,
                 prescription: recordData.prescription,
-                duration_seconds: consultationTime
+                duration_seconds: elapsed
             });
             toast.success('Prontuário salvo e consulta finalizada!');
             setIsRecordModalOpen(false);
-            localStorage.removeItem('activeConsultation');
-            setActiveConsultation(null);
+            setRecordingConsultation(null);
+            setRecordData({ description: '', prescription: '' });
+            setTranscriptionResult(null);
+            const updated = activeConsultations.filter(c => String(c.appointmentId) !== String(recordingConsultation.appointmentId));
+            localStorage.setItem('activeConsultations', JSON.stringify(updated));
+            setActiveConsultations(updated);
             fetchData();
         } catch (err) {
             toast.error('Erro ao salvar prontuário.');
@@ -351,26 +430,26 @@ const SchedulesPage = () => {
      * e salvando o estado no localStorage para o timer
      */
     const handleStartConsultation = () => {
-        if (activeConsultation) {
-            toast.error('Já existe um atendimento em andamento. Finalize-o primeiro.');
-            return;
-        }
-        
         if (!editingId || !formData.patient_id) {
             toast.error('É necessário ter um paciente agendado para iniciar o atendimento.');
             return;
         }
-        
+        const already = activeConsultations.some(c => String(c.appointmentId) === String(editingId));
+        if (already) {
+            toast.error('Esta consulta já está em andamento.');
+            return;
+        }
         const consultationData = {
             appointmentId: editingId,
             patientId: formData.patient_id,
             doctorId: formData.doctor_id,
             startTime: Date.now()
         };
-        
-        localStorage.setItem('activeConsultation', JSON.stringify(consultationData));
-        setActiveConsultation(consultationData);
+        const updated = [...activeConsultations, consultationData];
+        localStorage.setItem('activeConsultations', JSON.stringify(updated));
+        setActiveConsultations(updated);
         setIsModalOpen(false);
+        toast.success('Atendimento iniciado! Acompanhe no painel Sala de Atendimento.', { icon: '⏱️', duration: 3000 });
     };
 
 
@@ -566,28 +645,26 @@ const SchedulesPage = () => {
 
     return (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 fade-in h-full flex flex-col">
-            {activeConsultation && (
-                <div className="bg-violet-600 text-white rounded-2xl shadow-lg p-4 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in slide-in-from-top-4 duration-500 mb-2 mx-1 shadow-violet-500/20">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center animate-pulse">
-                            <FaClock className="text-2xl" />
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-lg tracking-tight">Atendimento em Andamento</h3>
-                            <p className="text-violet-200 text-sm font-medium">Tempo decorrido: <span className="font-mono text-base ml-1">{formatTime(consultationTime)}</span></p>
-                        </div>
-                    </div>
-                    <button 
-                        onClick={() => {
-                            setRecordData(prev => ({ ...prev, description: prev.description ? prev.description : `\n\n[Sistema] Duração da consulta: ${formatTime(consultationTime)}.` }));
-                            setIsRecordModalOpen(true);
-                        }}
-                        className="bg-white hover:bg-slate-50 text-violet-700 font-bold py-2.5 px-6 rounded-xl shadow-sm transition-transform hover:scale-105 flex items-center gap-2"
-                    >
-                        <FaFileMedicalAlt /> Parar Consulta e Preencher
-                    </button>
-                </div>
+
+            {/* ===== SALA DE ATENDIMENTO — Painel Flutuante Fixo (canto inferior direito) ===== */}
+            {activeConsultations.length > 0 && (
+                <FloatingConsultationPanel
+                    activeConsultations={activeConsultations}
+                    patients={patients}
+                    doctors={doctors}
+                    records={records}
+                    getElapsedSeconds={getElapsedSeconds}
+                    formatTime={formatTime}
+                    onFinalize={(c) => {
+                        setRecordingConsultation(c);
+                        setRecordData({ description: '', prescription: '' });
+                        setTranscriptionResult(null);
+                        setIsRecordModalOpen(true);
+                    }}
+                />
             )}
+
+
 
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
                 <div>
@@ -934,39 +1011,28 @@ const SchedulesPage = () => {
                             )}
                             {editingId && (() => {
                                 const hasRecord = records.some(r => String(r.appointmentId || r.appointment_id) === String(editingId));
-                                const isActive = activeConsultation && String(activeConsultation.appointmentId) === String(editingId);
+                                const isActiveNow = activeConsultations.some(c => String(c.appointmentId) === String(editingId));
                                 
                                 if (hasRecord) {
                                     return (
-                                        <div className="flex items-center gap-2 px-4 py-2 bg-slate-100/50 text-slate-500 font-bold rounded-lg border border-slate-200 text-xs sm:text-sm cursor-not-allowed cursor-default" title="O prontuário dessa consulta já foi assinado e finalizado">
-                                            <FaFileMedicalAlt className="text-slate-400" /> Atendimento Finalizado
+                                        <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-500 font-bold rounded-lg border border-slate-200 text-xs sm:text-sm cursor-default" title="Prontuário já assinado">
+                                            <FaFileMedicalAlt className="text-slate-400" /> Prontuário Salvo
                                         </div>
                                     );
                                 }
-                                
-                                if (isActive) {
+                                if (isActiveNow) {
                                     return (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setIsModalOpen(false);
-                                                setRecordData(prev => ({ ...prev, description: prev.description ? prev.description : `\n\n[Sistema] Duração da consulta: ${formatTime(consultationTime)}.` }));
-                                                setIsRecordModalOpen(true);
-                                            }}
-                                            className="flex items-center gap-2 px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 font-bold rounded-lg transition-colors border border-amber-200 text-xs sm:text-sm"
-                                        >
-                                            <FaClock className="text-sm animate-pulse" /> Consulta em Andamento
-                                        </button>
+                                        <div className="flex items-center gap-1.5 px-4 py-2 bg-emerald-50 text-emerald-700 font-bold rounded-lg border border-emerald-200 text-xs sm:text-sm">
+                                            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                                            Em andamento
+                                        </div>
                                     );
                                 }
-                                
                                 return (
                                     <button
                                         type="button"
                                         onClick={handleStartConsultation}
-                                        disabled={!!activeConsultation}
-                                        className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary disabled:opacity-50 disabled:cursor-not-allowed font-bold rounded-lg transition-colors border border-primary/20 text-xs sm:text-sm"
-                                        title={activeConsultation ? "Finalize a consulta atual primeiro" : "Iniciar relógio"}
+                                        className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-lg transition-all hover:scale-105 border border-primary/20 text-xs sm:text-sm"
                                     >
                                         <FaPlay className="text-[10px]" /> Iniciar Consulta
                                     </button>
