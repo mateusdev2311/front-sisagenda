@@ -1,29 +1,37 @@
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { FaHeartbeat, FaTachometerAlt, FaUsers, FaUserMd, FaUserInjured, FaCalendarAlt, FaFileMedicalAlt, FaCog, FaBuilding, FaStethoscope } from 'react-icons/fa';
+import { FaHeartbeat, FaTachometerAlt, FaUsers, FaUserMd, FaUserInjured, FaCalendarAlt, FaFileMedicalAlt, FaCog, FaBuilding, FaStethoscope, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
+    const [isCollapsed, setIsCollapsed] = useState(true);
 
     const linkClass = ({ isActive }) =>
-        `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 mt-1 ${isActive
+        `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 mt-1 overflow-hidden whitespace-nowrap ${isActive
             ? 'bg-primary text-white shadow-md shadow-primary/20 font-medium'
             : 'text-slate-500 hover:bg-white hover:text-slate-800 hover:shadow-sm'
-        }`;
+        } ${isCollapsed ? 'justify-center px-0' : ''}`;
 
-    const titleClass = "text-xs font-bold text-slate-400 uppercase tracking-wider mt-6 mb-2 px-4";
+    const titleClass = `text-xs font-bold text-slate-400 uppercase tracking-wider mt-6 mb-2 px-4 whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'opacity-0 h-0 mt-0 mb-0 overflow-hidden' : 'opacity-100'}`;
 
     const userString = localStorage.getItem('user');
     const user = userString ? JSON.parse(userString) : {};
     const isSuperAdmin = user.is_super_admin === true;
 
     return (
-        <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-slate-50 border-r border-slate-200 h-full flex flex-col transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0`}>
+        <aside className={`fixed inset-y-0 left-0 z-50 bg-slate-50 border-r border-slate-200 h-full flex flex-col transition-all duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 ${isCollapsed ? 'w-20' : 'w-72'}`}>
 
             <div className="h-20 flex items-center justify-center px-4 border-b border-slate-200 transition-colors overflow-hidden">
-                <img
-                    src="/logo_sisagenda-removebg-preview.png"
-                    alt="Sisagenda"
-                    className="h-32 w-auto object-contain"
-                />
+                {!isCollapsed ? (
+                    <img
+                        src="/logo_sisagenda-removebg-preview.png"
+                        alt="Sisagenda"
+                        className="h-32 w-auto object-contain transition-all duration-300"
+                    />
+                ) : (
+                    <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary font-bold text-xl shadow-sm">
+                        S
+                    </div>
+                )}
             </div>
 
             <nav 
@@ -37,8 +45,9 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                         <>
                             <li className={titleClass}>Gestão SaaS</li>
                             <li>
-                                <NavLink to="/admin/clinicas" className={linkClass}>
-                                    <FaBuilding className="text-lg opacity-80" /> <span>Clínicas Cadastradas</span>
+                                <NavLink to="/admin/clinicas" className={linkClass} title="Clínicas Cadastradas">
+                                    <FaBuilding className={`text-lg opacity-80 ${isCollapsed ? 'mx-auto' : ''}`} /> 
+                                    {!isCollapsed && <span>Clínicas Cadastradas</span>}
                                 </NavLink>
                             </li>
                         </>
@@ -48,50 +57,57 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                         <>
                             <li className={titleClass}>Visão Geral</li>
                             <li>
-                                <NavLink to="/home" className={linkClass}>
-                                    <FaTachometerAlt className="text-lg opacity-80" /> <span>Dashboard</span>
+                                <NavLink to="/home" className={linkClass} title="Dashboard">
+                                    <FaTachometerAlt className={`text-lg opacity-80 ${isCollapsed ? 'mx-auto' : ''}`} /> 
+                                    {!isCollapsed && <span>Dashboard</span>}
                                 </NavLink>
                             </li>
 
                             <li className={titleClass}>Gerenciamento</li>
                             <li>
-                                <NavLink to="/users" className={linkClass}>
-                                    <FaUsers className="text-lg opacity-80" /> <span>Usuários do Sistema</span>
+                                <NavLink to="/users" className={linkClass} title="Usuários do Sistema">
+                                    <FaUsers className={`text-lg opacity-80 ${isCollapsed ? 'mx-auto' : ''}`} /> 
+                                    {!isCollapsed && <span>Usuários do Sistema</span>}
                                 </NavLink>
                             </li>
                             <li>
-                                <NavLink to="/doctors" className={linkClass}>
-                                    <FaUserMd className="text-lg opacity-80" /> <span>Equipe Médica</span>
+                                <NavLink to="/doctors" className={linkClass} title="Equipe Médica">
+                                    <FaUserMd className={`text-lg opacity-80 ${isCollapsed ? 'mx-auto' : ''}`} /> 
+                                    {!isCollapsed && <span>Equipe Médica</span>}
                                 </NavLink>
                             </li>
 
                             <li className={titleClass}>Operações</li>
                             <li>
-                                <NavLink to="/patients" className={linkClass}>
-                                    <FaUserInjured className="text-lg opacity-80" /> <span>Registro de Pacientes</span>
+                                <NavLink to="/patients" className={linkClass} title="Registro de Pacientes">
+                                    <FaUserInjured className={`text-lg opacity-80 ${isCollapsed ? 'mx-auto' : ''}`} /> 
+                                    {!isCollapsed && <span>Registro de Pacientes</span>}
                                 </NavLink>
                             </li>
                             <li>
-                                <NavLink to="/schedules" className={linkClass}>
-                                    <FaCalendarAlt className="text-lg opacity-80" /> <span>Agendamentos</span>
+                                <NavLink to="/schedules" className={linkClass} title="Agendamentos">
+                                    <FaCalendarAlt className={`text-lg opacity-80 ${isCollapsed ? 'mx-auto' : ''}`} /> 
+                                    {!isCollapsed && <span>Agendamentos</span>}
                                 </NavLink>
                             </li>
                             <li>
-                                <NavLink to="/atendimentos" className={linkClass}>
-                                    <FaStethoscope className="text-lg opacity-80" />
-                                    <span>Sala de Atendimento</span>
+                                <NavLink to="/atendimentos" className={linkClass} title="Sala de Atendimento">
+                                    <FaStethoscope className={`text-lg opacity-80 ${isCollapsed ? 'mx-auto' : ''}`} />
+                                    {!isCollapsed && <span>Sala de Atendimento</span>}
                                 </NavLink>
                             </li>
                             <li>
-                                <NavLink to="/records" className={linkClass}>
-                                    <FaFileMedicalAlt className="text-lg opacity-80" /> <span>Prontuários Clínicos</span>
+                                <NavLink to="/records" className={linkClass} title="Prontuários Clínicos">
+                                    <FaFileMedicalAlt className={`text-lg opacity-80 ${isCollapsed ? 'mx-auto' : ''}`} /> 
+                                    {!isCollapsed && <span>Prontuários Clínicos</span>}
                                 </NavLink>
                             </li>
 
                             <li className={titleClass}>Financeiro</li>
                             <li>
-                                <NavLink to="/financial" className={linkClass}>
-                                    <FaHeartbeat className="text-lg opacity-80" /> <span>Faturamento</span>
+                                <NavLink to="/financial" className={linkClass} title="Faturamento">
+                                    <FaHeartbeat className={`text-lg opacity-80 ${isCollapsed ? 'mx-auto' : ''}`} /> 
+                                    {!isCollapsed && <span>Faturamento</span>}
                                 </NavLink>
                             </li>
                         </>
@@ -99,15 +115,28 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 
                     <li className={titleClass}>Configurações</li>
                     <li>
-                        <NavLink to="/settings" className={linkClass}>
-                            <FaCog className="text-lg opacity-80" /> <span>Preferências</span>
+                        <NavLink to="/settings" className={linkClass} title="Preferências">
+                            <FaCog className={`text-lg opacity-80 ${isCollapsed ? 'mx-auto' : ''}`} /> 
+                            {!isCollapsed && <span>Preferências</span>}
                         </NavLink>
                     </li>
                 </ul>
             </nav>
 
-            <div className="p-4 border-t border-slate-200 text-center">
-                <p className="text-xs text-slate-400 font-medium">Sisagendamento Pro v2.0</p>
+            <div className={`p-4 border-t border-slate-200 flex ${isCollapsed ? 'justify-center' : 'justify-between'} items-center transition-all duration-300`}>
+                {!isCollapsed && (
+                    <div className="flex flex-col">
+                        <span className="text-xs font-bold text-slate-700">Sisagendamento Pro</span>
+                        <span className="text-[10px] text-slate-400 font-medium">v2.0</span>
+                    </div>
+                )}
+                <button 
+                    onClick={() => setIsCollapsed(!isCollapsed)}
+                    className="w-8 h-8 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-600 flex items-center justify-center transition-colors"
+                    title={isCollapsed ? "Expandir" : "Retrair"}
+                >
+                    {isCollapsed ? <FaChevronRight className="text-xs" /> : <FaChevronLeft className="text-xs" />}
+                </button>
             </div>
         </aside>
     );
