@@ -78,6 +78,19 @@ const StatusBadge = ({ configured, label }) => (
     </span>
 );
 
+// ─── Lógica de Próximo Vencimento ──────────────────────────────────────────────
+const formatDueDate = (dateStr) => {
+    if (!dateStr) return '';
+    const day = parseInt(dateStr.split('T')[0].split('-')[2], 10);
+    const today = new Date();
+    let targetMonth = today.getMonth() + 1;
+    if (today.getDate() > day) {
+        targetMonth++;
+        if (targetMonth > 12) targetMonth = 1;
+    }
+    return `${String(day).padStart(2, '0')}/${String(targetMonth).padStart(2, '0')}`;
+};
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 const SettingsPage = () => {
     const { refreshSettings } = useSettings();
@@ -125,6 +138,9 @@ const SettingsPage = () => {
     const [aiConfigured, setAiConfigured] = useState(false);
     const [isSavingAiToken, setIsSavingAiToken] = useState(false);
 
+    // ─── Dados Extras da Clínica ──────────────────────────────────────────────
+    const [companyInfo, setCompanyInfo] = useState({ plan: 'free', due_date: null });
+
     // ─── Carregamento Inicial ─────────────────────────────────────────────────
     useEffect(() => {
         axios.get('/system-settings')
@@ -171,10 +187,14 @@ const SettingsPage = () => {
             })
             .catch(() => setWaInstance(null));
 
-        // IA — checar configuração
+        // IA — checar configuração e pegar infos básicas (plano/vencimento)
         getCompanyInfo()
             .then(res => {
                 setAiConfigured(res.data?.ai_configured || false);
+                setCompanyInfo({
+                    plan: res.data?.plan || 'free',
+                    due_date: res.data?.due_date || null
+                });
             })
             .catch(() => {});
 
@@ -523,6 +543,27 @@ const SettingsPage = () => {
                                 <div>
                                     <label className="block text-sm font-bold text-slate-700 mb-1">CNPJ</label>
                                     <input type="text" className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 focus:ring-2 focus:ring-primary/20 outline-none" value={settings.company_cnpj} onChange={e => setSettings({ ...settings, company_cnpj: e.target.value })} />
+                                </div>
+                                
+                                <div className="mt-6 pt-6 border-t border-slate-100 flex items-center justify-between bg-slate-50/50 p-4 rounded-xl border border-slate-200">
+                                    <div>
+                                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Plano Atual</p>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`px-3 py-1 text-xs font-bold uppercase rounded-lg shadow-sm border ${
+                                                companyInfo.plan === 'pro' ? 'bg-indigo-50 border-indigo-200 text-indigo-700' :
+                                                companyInfo.plan === 'start' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
+                                                'bg-white border-slate-200 text-slate-600'
+                                            }`}>
+                                                {companyInfo.plan || 'Free'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Data de Vencimento</p>
+                                        <p className="text-sm font-bold text-slate-800">
+                                            {companyInfo.due_date ? formatDueDate(companyInfo.due_date) : '—'}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>

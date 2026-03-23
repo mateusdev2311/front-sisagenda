@@ -2,14 +2,26 @@ import { useState, useEffect } from 'react';
 import axios from '../api/axiosConfig';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
-import { FaPlus, FaEye, FaTrash, FaBuilding, FaUserTie, FaSearch } from 'react-icons/fa';
+import { FaPlus, FaEye, FaTrash, FaBuilding, FaUserTie, FaSearch, FaEdit } from 'react-icons/fa';
+
+const formatDueDate = (dateStr) => {
+    if (!dateStr) return '';
+    const day = parseInt(dateStr.split('T')[0].split('-')[2], 10);
+    const today = new Date();
+    let targetMonth = today.getMonth() + 1;
+    if (today.getDate() > day) {
+        targetMonth++;
+        if (targetMonth > 12) targetMonth = 1;
+    }
+    return `${String(day).padStart(2, '0')}/${String(targetMonth).padStart(2, '0')}`;
+};
 
 const AdminCompaniesPage = () => {
     const [companies, setCompanies] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isViewing, setIsViewing] = useState(false);
     const [currentCompany, setCurrentCompany] = useState(null);
-    const [formData, setFormData] = useState({ name: '', admin_name: '', admin_email: '', admin_password: '' });
+    const [formData, setFormData] = useState({ name: '', admin_name: '', admin_email: '', admin_password: '', due_date: '', document: '', phone: '', plan: 'free' });
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', type: 'primary', onConfirm: null });
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -30,7 +42,7 @@ const AdminCompaniesPage = () => {
     const handleOpenCreate = () => {
         setIsViewing(false);
         setCurrentCompany(null);
-        setFormData({ name: '', admin_name: '', admin_email: '', admin_password: '' });
+        setFormData({ name: '', admin_name: '', admin_email: '', admin_password: '', due_date: '', document: '', phone: '', plan: 'free' });
         setIsModalOpen(true);
     };
 
@@ -43,6 +55,22 @@ const AdminCompaniesPage = () => {
         } catch (error) {
             toast.error('Erro ao carregar detalhes da clínica. Tente novamente.');
         }
+    };
+
+    const handleOpenEdit = (company) => {
+        setIsViewing(false);
+        setCurrentCompany(company);
+        setFormData({ 
+            name: company.name || '', 
+            admin_name: '', // Gestor info might not be updatable from here, or we keep it blank
+            admin_email: '', 
+            admin_password: '', 
+            due_date: company.due_date ? String(company.due_date).split('T')[0] : '', 
+            document: company.document || '', 
+            phone: company.phone || '', 
+            plan: company.plan || 'free' 
+        });
+        setIsModalOpen(true);
     };
 
     const handleDelete = (id) => {
@@ -65,19 +93,28 @@ const AdminCompaniesPage = () => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        const isEditing = !!currentCompany;
+        
         setConfirmDialog({
             isOpen: true,
-            title: 'Confirmar Cadastro',
-            message: 'Gostaria de proceder com o cadastro desta nova clínica (tenant)?',
+            title: isEditing ? 'Confirmar Atualização' : 'Confirmar Cadastro',
+            message: isEditing ? 'Gostaria de salvar as alterações desta clínica?' : 'Gostaria de proceder com o cadastro desta nova clínica (tenant)?',
             type: 'primary',
             onConfirm: async () => {
                 try {
-                    await axios.post('/companies', formData);
+                    const payload = { ...formData };
+                    if (isEditing && !payload.admin_password) delete payload.admin_password;
+
+                    if (isEditing) {
+                        await axios.put(`/companies/${currentCompany.id}`, payload);
+                    } else {
+                        await axios.post('/companies', payload);
+                    }
                     setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                     setIsModalOpen(false);
                     fetchCompanies();
                 } catch (error) {
-                    toast.error('Erro ao cadastrar clínica. Verifique os dados e tente novamente.');
+                    toast.error(isEditing ? 'Erro ao atualizar clínica.' : 'Erro ao cadastrar clínica. Verifique os dados.');
                 }
             }
         });
@@ -139,6 +176,8 @@ const AdminCompaniesPage = () => {
                             <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider font-semibold">
                                 <th className="px-6 py-4">Nome da Clínica</th>
                                 <th className="px-6 py-4">Status</th>
+                                <th className="px-6 py-4">Plano</th>
+                                <th className="px-6 py-4">Vencimento</th>
                                 <th className="px-6 py-4">Criado em</th>
                                 <th className="px-6 py-4 text-right">Ações</th>
                             </tr>
@@ -170,6 +209,18 @@ const AdminCompaniesPage = () => {
                                             {c.status ? 'Ativo' : 'Suspenso'}
                                         </button>
                                     </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded-md ${
+                                            c.plan === 'pro' ? 'bg-indigo-100 text-indigo-700' :
+                                            c.plan === 'start' ? 'bg-emerald-100 text-emerald-700' :
+                                            'bg-slate-100 text-slate-600'
+                                        }`}>
+                                            {c.plan || 'Free'}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-medium">
+                                        {c.due_date ? formatDueDate(c.due_date) : '—'}
+                                    </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                                         {new Date(c.created_at || c.createdAt).toLocaleDateString()}
                                     </td>
@@ -177,6 +228,9 @@ const AdminCompaniesPage = () => {
                                         <div className="flex justify-end gap-2 transition-opacity">
                                             <button className="p-2 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors" title="Visualizar Detalhes" onClick={() => handleOpenView(c.id)}>
                                                 <FaEye />
+                                            </button>
+                                            <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title="Editar Clínica" onClick={() => handleOpenEdit(c)}>
+                                                <FaEdit />
                                             </button>
                                             <button className="p-2 text-slate-400 hover:text-danger hover:bg-danger/5 rounded-lg transition-colors" title="Excluir Sistema" onClick={() => handleDelete(c.id)}>
                                                 <FaTrash />
@@ -203,7 +257,7 @@ const AdminCompaniesPage = () => {
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                title={isViewing ? "Detalhes da Clínica" : "Nova Clínica SaaS"}
+                title={isViewing ? "Detalhes da Clínica" : (currentCompany ? "Editar Clínica SaaS" : "Nova Clínica SaaS")}
             >
                 {isViewing && currentCompany ? (
                     <div className="space-y-6">
@@ -228,44 +282,94 @@ const AdminCompaniesPage = () => {
                                 <span className="text-sm font-semibold text-slate-800">{new Date(currentCompany.created_at || currentCompany.createdAt).toLocaleString()}</span>
                             </div>
                         </div>
+                        <div className="bg-white border border-slate-100 rounded-xl divide-y divide-slate-100 mt-4">
+                            <div className="flex justify-between p-4">
+                                <span className="text-sm font-medium text-slate-500">Documento</span>
+                                <span className="text-sm font-semibold text-slate-800">{currentCompany.document || 'Não informado'}</span>
+                            </div>
+                            <div className="flex justify-between p-4">
+                                <span className="text-sm font-medium text-slate-500">Telefone</span>
+                                <span className="text-sm font-semibold text-slate-800">{currentCompany.phone || 'Não informado'}</span>
+                            </div>
+                            <div className="flex justify-between p-4">
+                                <span className="text-sm font-medium text-slate-500">Data de Vencimento</span>
+                                <span className="text-sm font-semibold text-slate-800">
+                                    {currentCompany.due_date ? formatDueDate(currentCompany.due_date) : 'Não informado'}
+                                </span>
+                            </div>
+                            <div className="flex justify-between p-4">
+                                <span className="text-sm font-medium text-slate-500">Plano</span>
+                                <span className="text-sm font-semibold text-slate-800 uppercase">{currentCompany.plan || 'Free'}</span>
+                            </div>
+                        </div>
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit} className="space-y-5">
                         <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 mb-4 flex items-start gap-3">
                              <div className="text-primary mt-1"><FaBuilding /></div>
                              <div>
-                                 <h4 className="text-sm font-semibold text-slate-800">Criação de Tenant</h4>
-                                 <p className="text-xs text-slate-600">Esta ação irá cadastrar a clínica e provisionar automaticamente o seu usuário Gestor/Administrador.</p>
+                                 <h4 className="text-sm font-semibold text-slate-800">{currentCompany ? 'Atualização de Tenant' : 'Criação de Tenant'}</h4>
+                                 <p className="text-xs text-slate-600">{currentCompany ? 'Atualize as informações principais e o plano desta clínica.' : 'Esta ação irá cadastrar a clínica e provisionar automaticamente o seu usuário Gestor/Administrador.'}</p>
                              </div>
                         </div>
 
-                        <div>
-                            <label>Nome da Clínica</label>
-                            <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required placeholder="Ex: Clínica MedVida" />
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="col-span-2">
+                                <label>Nome da Clínica</label>
+                                <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required placeholder="Ex: Clínica MedVida" />
+                            </div>
+                            <div>
+                                <label>Documento (CNPJ/CPF)</label>
+                                <input type="text" value={formData.document} onChange={e => setFormData({ ...formData, document: e.target.value })} placeholder="00.000.000/0001-00" />
+                            </div>
+                            <div>
+                                <label>Telefone</label>
+                                <input type="text" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} placeholder="(00) 00000-0000" />
+                            </div>
+                            <div>
+                                <label>Data de Venc. (Fatura)</label>
+                                <input type="date" value={formData.due_date} onChange={e => setFormData({ ...formData, due_date: e.target.value })} />
+                            </div>
+                            <div className="col-span-2">
+                                <label>Plano</label>
+                                <select 
+                                    value={formData.plan} 
+                                    onChange={e => setFormData({ ...formData, plan: e.target.value })}
+                                    className="w-full form-input"
+                                >
+                                    <option value="free">Free</option>
+                                    <option value="start">Start</option>
+                                    <option value="pro">Pro</option>
+                                </select>
+                            </div>
                         </div>
                         
-                        <div className="pt-4 border-t border-slate-100">
-                             <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2"><FaUserTie className="text-primary"/> Dados do Gestor (Admin da Clínica)</h4>
-                        </div>
+                        {!currentCompany && (
+                            <>
+                                <div className="pt-4 border-t border-slate-100">
+                                     <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2"><FaUserTie className="text-primary"/> Dados do Gestor (Admin da Clínica)</h4>
+                                </div>
 
-                        <div>
-                            <label>Nome do Gestor</label>
-                            <input type="text" value={formData.admin_name} onChange={e => setFormData({ ...formData, admin_name: e.target.value })} required placeholder="João da Silva" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label>E-mail do Gestor</label>
-                                <input type="email" value={formData.admin_email} onChange={e => setFormData({ ...formData, admin_email: e.target.value })} required placeholder="admin@clinica.com" />
-                            </div>
-                            <div>
-                                <label>Senha do Gestor</label>
-                                <input type="password" value={formData.admin_password} onChange={e => setFormData({ ...formData, admin_password: e.target.value })} required minLength="6" placeholder="••••••••" />
-                            </div>
-                        </div>
+                                <div>
+                                    <label>Nome do Gestor</label>
+                                    <input type="text" value={formData.admin_name} onChange={e => setFormData({ ...formData, admin_name: e.target.value })} required placeholder="João da Silva" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label>E-mail do Gestor</label>
+                                        <input type="email" value={formData.admin_email} onChange={e => setFormData({ ...formData, admin_email: e.target.value })} required placeholder="admin@clinica.com" />
+                                    </div>
+                                    <div>
+                                        <label>Senha do Gestor</label>
+                                        <input type="password" value={formData.admin_password} onChange={e => setFormData({ ...formData, admin_password: e.target.value })} required minLength="6" placeholder="••••••••" />
+                                    </div>
+                                </div>
+                            </>
+                        )}
                         
                         <div className="modal-footer pt-6 mt-6 border-t border-slate-100 flex justify-end gap-3 -mx-6 -mb-6 px-6 bg-slate-50 rounded-b-xl">
                             <button type="button" className="btn-secondary" onClick={() => setIsModalOpen(false)}>Cancelar</button>
-                            <button type="submit" className="btn-primary" style={{ margin: 0 }}>Cadastrar Clínica</button>
+                            <button type="submit" className="btn-primary" style={{ margin: 0 }}>{currentCompany ? 'Salvar Alterações' : 'Cadastrar Clínica'}</button>
                         </div>
                     </form>
                 )}
