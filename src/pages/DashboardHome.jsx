@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import axios from '../api/axiosConfig';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Filler } from 'chart.js';
-import { Doughnut, Line, Bar } from 'react-chartjs-2';
-import { FaCalendarCheck, FaUserMd, FaArrowUp, FaChartLine, FaMoneyBillWave, FaClock, FaCheckCircle, FaUserInjured, FaChevronLeft, FaChevronRight, FaStethoscope, FaFileMedicalAlt } from 'react-icons/fa';
+import { Doughnut, Line } from 'react-chartjs-2';
+import { FaCalendarCheck, FaUserMd, FaMoneyBillWave, FaClock, FaCheckCircle, FaUserInjured, FaChevronLeft, FaChevronRight, FaFileMedicalAlt } from 'react-icons/fa';
 import { useSettings } from '../context/SettingsContext';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Filler);
@@ -17,43 +18,32 @@ const toLocalYYYYMMDD = (date) => {
     return `${y}-${m}-${d}`;
 };
 
+// ─── Fetchers (separados para o React Query cachear individualmente) ──────────
+
+const fetchAll = () => Promise.all([
+    axios.get('/appointments').then(r => r.data || []),
+    axios.get('/doctors').then(r => r.data || []),
+    axios.get('/patients').then(r => r.data || []),
+    axios.get('/billing').then(r => r.data || []),
+    axios.get('/records').then(r => Array.isArray(r.data) ? r.data : []),
+    axios.get('/company/me').then(r => r.data?.plan || 'free').catch(() => 'free'),
+]);
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 const DashboardHome = () => {
     const { settings } = useSettings();
     const currency = settings?.currency || 'BRL';
-
     const [selectedDate, setSelectedDate] = useState(toLocalYYYYMMDD(new Date()));
 
-    const [allAppointments, setAllAppointments] = useState([]);
-    const [allDoctors, setAllDoctors]           = useState([]);
-    const [allPatients, setAllPatients]         = useState([]);
-    const [allBillings, setAllBillings]         = useState([]);
-    const [allRecords, setAllRecords]           = useState([]);
-    const [companyPlan, setCompanyPlan]         = useState('free');
-    const [loading, setLoading]                 = useState(true);
+    // useQuery faz o cache automático por 5 minutos (configurado no QueryClient global)
+    const { data, isLoading } = useQuery({
+        queryKey: ['dashboard'],
+        queryFn: fetchAll,
+    });
 
-    useEffect(() => {
-        const load = async () => {
-            setLoading(true);
-            try {
-                const [a, d, p, b, r, c] = await Promise.all([
-                    axios.get('/appointments'),
-                    axios.get('/doctors'),
-                    axios.get('/patients'),
-                    axios.get('/billing'),
-                    axios.get('/records'),
-                    axios.get('/company/me').catch(() => ({ data: { plan: 'free' } }))
-                ]);
-                setAllAppointments(a.data || []);
-                setAllDoctors(d.data || []);
-                setAllPatients(p.data || []);
-                setAllBillings(b.data || []);
-                setAllRecords(Array.isArray(r.data) ? r.data : []);
-                setCompanyPlan(c.data?.plan || 'free');
-            } catch (e) { console.error(e); }
-            setLoading(false);
-        };
-        load();
-    }, []);
+    const [allAppointments, allDoctors, allPatients, allBillings, allRecords, companyPlan] =
+        data ?? [[], [], [], [], [], 'free'];
 
     // ---- Derived: selected date stats ----
     const dayApps = allAppointments.filter(app => {
@@ -79,7 +69,6 @@ const DashboardHome = () => {
         else if ((b.status || '').toLowerCase() === 'pendente') dayPending += val;
     });
 
-    // All-time totals
     let totalRevenue = 0, totalPending = 0;
     allBillings.forEach(b => {
         const val = parseFloat(b.value) || 0;
@@ -90,8 +79,6 @@ const DashboardHome = () => {
     const isToday = selectedDate === toLocalYYYYMMDD(new Date());
 
     // ---- Charts ----
-
-    // Doughnut: appointments by doctor for selected day
     const appByDoc = {};
     dayApps.forEach(app => { appByDoc[app.doctor_id] = (appByDoc[app.doctor_id] || 0) + 1; });
     const doughnutDoc = {
@@ -110,49 +97,27 @@ const DashboardHome = () => {
         }]
     };
 
-    // Monthly timeline
-    const selD   = new Date(selectedDate + 'T00:00:00');
-    const yr     = selD.getFullYear();
-    const mo     = selD.getMonth();
-    const days   = new Date(yr, mo + 1, 0).getDate();
+    const selD  = new Date(selectedDate + 'T00:00:00');
+    const yr    = selD.getFullYear();
+    const mo    = selD.getMonth();
+    const days  = new Date(yr, mo + 1, 0).getDate();
     const tlData = new Array(days).fill(0);
     allAppointments.forEach(app => {
         if (!app.date) return;
         const raw = String(app.date).split('Z')[0].split('+')[0].replace(' ', 'T');
         const d   = new Date(raw);
-        if (d.getFullYear() === yr && d.getMonth() === mo) {
-            tlData[d.getDate() - 1] += 1;
-        }
+        if (d.getFullYear() === yr && d.getMonth() === mo) tlData[d.getDate() - 1] += 1;
     });
     const timelineChart = {
         labels: Array.from({ length: days }, (_, i) => i + 1),
-        datasets: [{
-            label: 'Consultas',
-            data: tlData,
-            borderColor: '#6c5be4',
-            backgroundColor: 'rgba(108,91,228,0.12)',
-            borderWidth: 2.5,
-            tension: 0.4,
-            fill: true,
-            pointBackgroundColor: '#fff',
-            pointBorderColor: '#6c5be4',
-            pointRadius: 3,
-            pointHoverRadius: 6
-        }]
+        datasets: [{ label: 'Consultas', data: tlData, borderColor: '#6c5be4', backgroundColor: 'rgba(108,91,228,0.12)', borderWidth: 2.5, tension: 0.4, fill: true, pointBackgroundColor: '#fff', pointBorderColor: '#6c5be4', pointRadius: 3, pointHoverRadius: 6 }]
     };
 
-    // Financials doughnut
     const financialChart = {
         labels: ['Recebido', 'Pendente'],
-        datasets: [{
-            data: [totalRevenue, totalPending],
-            backgroundColor: ['#10b981', '#f59e0b'],
-            borderWidth: 0,
-            hoverOffset: 6
-        }]
+        datasets: [{ data: [totalRevenue, totalPending], backgroundColor: ['#10b981', '#f59e0b'], borderWidth: 0, hoverOffset: 6 }]
     };
 
-    // ---- Chart options ----
     const baseOpts = {
         maintainAspectRatio: false,
         plugins: {
@@ -174,9 +139,10 @@ const DashboardHome = () => {
         setSelectedDate(toLocalYYYYMMDD(d));
     };
 
-    const dateLabel = isToday ? 'Hoje' : new Date(selectedDate + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
+    const dateLabel = isToday
+        ? 'Hoje'
+        : new Date(selectedDate + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
 
-    // activity list: appointments for the day
     const dayAppsSorted = [...dayApps].sort((a, b) => new Date(a.date) - new Date(b.date));
 
     const KpiCard = ({ label, value, sub, icon: Icon, iconBg, iconColor, badge, badgeColor }) => (
@@ -197,6 +163,27 @@ const DashboardHome = () => {
             {sub && <p className="text-xs text-slate-400">{sub}</p>}
         </div>
     );
+
+    // ── Loading skeleton ──────────────────────────────────────────────────────
+    if (isLoading) {
+        return (
+            <div className="space-y-7 animate-pulse">
+                <div className="flex justify-between items-center">
+                    <div className="h-8 w-48 bg-slate-100 rounded-xl" />
+                    <div className="h-10 w-56 bg-slate-100 rounded-xl" />
+                </div>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                        <div key={i} className="h-28 bg-slate-100 rounded-2xl" />
+                    ))}
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 h-80 bg-slate-100 rounded-2xl" />
+                    <div className="h-80 bg-slate-100 rounded-2xl" />
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-7 animate-in slide-in-from-bottom-4 duration-500 fade-in">
@@ -244,42 +231,10 @@ const DashboardHome = () => {
                     {dateLabel}
                 </p>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <KpiCard
-                        label="Consultas"
-                        value={dayApps.length}
-                        icon={FaCalendarCheck}
-                        iconBg="#ede9fe"
-                        iconColor="#6c5be4"
-                        badge={dayApps.length === 0 ? 'Nenhuma consulta' : `${dayApps.length} agendada${dayApps.length > 1 ? 's' : ''}`}
-                        badgeColor="#6c5be4"
-                    />
-                    <KpiCard
-                        label="Prontuários"
-                        value={dayRecords.length}
-                        icon={FaFileMedicalAlt}
-                        iconBg="#dcfce7"
-                        iconColor="#16a34a"
-                        badge={dayApps.length > 0 ? `${Math.round((dayRecords.length / dayApps.length) * 100)}% concluídos` : '—'}
-                        badgeColor="#16a34a"
-                    />
-                    <KpiCard
-                        label="Receita do Dia"
-                        value={fmt(dayRevenue, currency)}
-                        icon={FaCheckCircle}
-                        iconBg="#d1fae5"
-                        iconColor="#059669"
-                        badge="Faturas pagas"
-                        badgeColor="#059669"
-                    />
-                    <KpiCard
-                        label="Pendente do Dia"
-                        value={fmt(dayPending, currency)}
-                        icon={FaClock}
-                        iconBg="#fef3c7"
-                        iconColor="#d97706"
-                        badge="A receber"
-                        badgeColor="#d97706"
-                    />
+                    <KpiCard label="Consultas" value={dayApps.length} icon={FaCalendarCheck} iconBg="#ede9fe" iconColor="#6c5be4" badge={dayApps.length === 0 ? 'Nenhuma consulta' : `${dayApps.length} agendada${dayApps.length > 1 ? 's' : ''}`} badgeColor="#6c5be4" />
+                    <KpiCard label="Prontuários" value={dayRecords.length} icon={FaFileMedicalAlt} iconBg="#dcfce7" iconColor="#16a34a" badge={dayApps.length > 0 ? `${Math.round((dayRecords.length / dayApps.length) * 100)}% concluídos` : '—'} badgeColor="#16a34a" />
+                    <KpiCard label="Receita do Dia" value={fmt(dayRevenue, currency)} icon={FaCheckCircle} iconBg="#d1fae5" iconColor="#059669" badge="Faturas pagas" badgeColor="#059669" />
+                    <KpiCard label="Pendente do Dia" value={fmt(dayPending, currency)} icon={FaClock} iconBg="#fef3c7" iconColor="#d97706" badge="A receber" badgeColor="#d97706" />
                 </div>
             </div>
 
@@ -290,49 +245,16 @@ const DashboardHome = () => {
                     Totais Gerais
                 </p>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <KpiCard
-                        label="Médicos"
-                        value={allDoctors.length}
-                        icon={FaUserMd}
-                        iconBg="#e0e7ff"
-                        iconColor="#4f46e5"
-                        badge="Equipe ativa"
-                        badgeColor="#4f46e5"
-                    />
-                    <KpiCard
-                        label="Pacientes"
-                        value={allPatients.length}
-                        icon={FaUserInjured}
-                        iconBg="#fce7f3"
-                        iconColor="#db2777"
-                        badge="Cadastrados"
-                        badgeColor="#db2777"
-                    />
-                    <KpiCard
-                        label="Receita Total"
-                        value={fmt(totalRevenue, currency)}
-                        icon={FaMoneyBillWave}
-                        iconBg="#d1fae5"
-                        iconColor="#059669"
-                        badge="Recebido"
-                        badgeColor="#059669"
-                    />
-                    <KpiCard
-                        label="A Receber"
-                        value={fmt(totalPending, currency)}
-                        icon={FaClock}
-                        iconBg="#fef3c7"
-                        iconColor="#d97706"
-                        badge="Total pendente"
-                        badgeColor="#d97706"
-                    />
+                    <KpiCard label="Médicos" value={allDoctors.length} icon={FaUserMd} iconBg="#e0e7ff" iconColor="#4f46e5" badge="Equipe ativa" badgeColor="#4f46e5" />
+                    <KpiCard label="Pacientes" value={allPatients.length} icon={FaUserInjured} iconBg="#fce7f3" iconColor="#db2777" badge="Cadastrados" badgeColor="#db2777" />
+                    <KpiCard label="Receita Total" value={fmt(totalRevenue, currency)} icon={FaMoneyBillWave} iconBg="#d1fae5" iconColor="#059669" badge="Recebido" badgeColor="#059669" />
+                    <KpiCard label="A Receber" value={fmt(totalPending, currency)} icon={FaClock} iconBg="#fef3c7" iconColor="#d97706" badge="Total pendente" badgeColor="#d97706" />
                 </div>
             </div>
 
             {/* ---- Charts + Activity ---- */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                {/* Timeline - col-span-2 */}
                 <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                     <div className="px-6 py-4 border-b border-slate-50 flex items-center justify-between">
                         <h3 className="font-bold text-slate-800 text-sm">Consultas no Mês — {new Date(selectedDate + 'T00:00:00').toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</h3>
@@ -342,7 +264,6 @@ const DashboardHome = () => {
                     </div>
                 </div>
 
-                {/* Doctor doughnut */}
                 <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                     <div className="px-6 py-4 border-b border-slate-50">
                         <h3 className="font-bold text-slate-800 text-sm">Carga por Médico</h3>
@@ -356,7 +277,6 @@ const DashboardHome = () => {
                     </div>
                 </div>
 
-                {/* Financial doughnut */}
                 <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                     <div className="px-6 py-4 border-b border-slate-50">
                         <h3 className="font-bold text-slate-800 text-sm">Faturamento Geral</h3>
@@ -370,7 +290,6 @@ const DashboardHome = () => {
                     </div>
                 </div>
 
-                {/* Activity list */}
                 <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                     <div className="px-6 py-4 border-b border-slate-50 flex items-center justify-between">
                         <h3 className="font-bold text-slate-800 text-sm">Agenda do Dia</h3>
