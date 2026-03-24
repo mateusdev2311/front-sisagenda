@@ -126,6 +126,7 @@ const SchedulesPage = () => {
     const [recordingConsultation, setRecordingConsultation] = useState(null); // which consultation we’re filling the record for
     const [recordData, setRecordData] = useState({ description: '', prescription: '' });
     const [isSavingRecord, setIsSavingRecord] = useState(false);
+    const [companyPlan, setCompanyPlan] = useState('start'); // default allows access while loading
 
     // AI Variables
     const [aiConfigured, setAiConfigured] = useState(false);
@@ -262,7 +263,10 @@ const SchedulesPage = () => {
             .catch(() => { }); // Sem integração configurada é OK silenciosamente
             
         getCompanyInfo()
-            .then(res => setAiConfigured(res.data?.ai_configured || false))
+            .then(res => {
+                setAiConfigured(res.data?.ai_configured || false);
+                setCompanyPlan(res.data?.plan || 'free');
+            })
             .catch(() => {});
     }, [currentDate]);
 
@@ -977,24 +981,43 @@ const SchedulesPage = () => {
                             <FaMoneyBillWave className="text-emerald-600" />
                             <h5 className="font-bold text-slate-700 text-sm">Faturamento Expresso (Opcional)</h5>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-xs font-semibold text-slate-600">Valor Cobrado (R$)</label>
-                                <input type="number" step="0.01" className="form-control text-sm py-1.5" placeholder="0.00" value={formData.billingValue} onChange={e => setFormData({ ...formData, billingValue: e.target.value })} />
+                        {companyPlan === 'free' ? (
+                            <div className="flex flex-col gap-2 py-2">
+                                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 font-medium">
+                                    🔒 O faturamento expresso não está disponível no plano Free.
+                                    Faça upgrade para o plano <strong>Start</strong> ou superior.
+                                </p>
+                                <a
+                                    href={`https://wa.me/5538999748911?text=${encodeURIComponent('Olá! Tenho interesse em fazer upgrade do meu plano no Sisagenda. Poderia me enviar mais informações?')}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center justify-center gap-2 py-2 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg text-xs transition-all"
+                                >
+                                    Fazer Upgrade pelo WhatsApp
+                                </a>
                             </div>
-                            <div>
-                                <label className="text-xs font-semibold text-slate-600">Forma de Pagto.</label>
-                                <select className="form-control text-sm py-1.5" value={formData.billingMethod} onChange={e => setFormData({ ...formData, billingMethod: e.target.value })}>
-                                    <option value="">Não definido</option>
-                                    <option value="Pix">Transf. via Pix</option>
-                                    <option value="Cartão de Crédito">Cartão de Crédito</option>
-                                    <option value="Cartão de Débito">Cartão de Débito</option>
-                                    <option value="Dinheiro">Dinheiro (Espécie)</option>
-                                    <option value="Boleto">Boleto</option>
-                                </select>
-                            </div>
-                        </div>
-                        <p className="text-[11px] text-slate-400 mt-2">* Ao preencher valor, uma fatura "Pendente" será gerada automaticamente na guia Financeiro.</p>
+                        ) : (
+                            <>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-xs font-semibold text-slate-600">Valor Cobrado (R$)</label>
+                                        <input type="number" step="0.01" className="form-control text-sm py-1.5" placeholder="0.00" value={formData.billingValue} onChange={e => setFormData({ ...formData, billingValue: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-semibold text-slate-600">Forma de Pagto.</label>
+                                        <select className="form-control text-sm py-1.5" value={formData.billingMethod} onChange={e => setFormData({ ...formData, billingMethod: e.target.value })}>
+                                            <option value="">Não definido</option>
+                                            <option value="Pix">Transf. via Pix</option>
+                                            <option value="Cartão de Crédito">Cartão de Crédito</option>
+                                            <option value="Cartão de Débito">Cartão de Débito</option>
+                                            <option value="Dinheiro">Dinheiro (Espécie)</option>
+                                            <option value="Boleto">Boleto</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <p className="text-[11px] text-slate-400 mt-2">* Ao preencher valor, uma fatura "Pendente" será gerada automaticamente na guía Financeiro.</p>
+                            </>
+                        )}
                     </div>
 
                     <div className="modal-footer flex items-center pt-6 mt-6 border-t border-slate-100 -mx-6 -mb-6 px-6 bg-slate-50 rounded-b-xl gap-3">

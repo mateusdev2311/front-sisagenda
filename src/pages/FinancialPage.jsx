@@ -7,6 +7,8 @@ import Pagination from '../components/Pagination';
 import toast from 'react-hot-toast';
 import Select from 'react-select';
 import { useSettings } from '../context/SettingsContext';
+import { getCompanyInfo } from '../services/aiService';
+import { FaWhatsapp } from 'react-icons/fa';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
 import { Doughnut, Bar } from 'react-chartjs-2';
 
@@ -37,12 +39,16 @@ const FinancialPage = () => {
     const [stats, setStats] = useState({ totalRevenue: 0, pendingAmount: 0, paidCount: 0 });
     const [revenueChartData, setRevenueChartData] = useState(null);
     const [methodChartData, setMethodChartData] = useState(null);
+    const [companyPlan, setCompanyPlan] = useState(null); // null = loading
 
     // ----------------------------------------------------------------------
     // 3. Efeitos de Montagem e Busca de Dados
     // ----------------------------------------------------------------------
     useEffect(() => {
         fetchData();
+        getCompanyInfo()
+            .then(res => setCompanyPlan(res.data?.plan || 'free'))
+            .catch(() => setCompanyPlan('free'));
     }, []);
 
     // Atualiza os KPIs sempre que os pagamentos mudam
@@ -240,6 +246,49 @@ const FinancialPage = () => {
     useEffect(() => {
         setCurrentPage(1);
     }, [searchTerm, statusFilter]);
+
+    // ── Paywall para plano Free ──────────────────────────────────────────────
+    if (companyPlan === 'free') {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 animate-in fade-in duration-500">
+                <div className="w-20 h-20 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center">
+                    <FaMoneyBillWave className="text-amber-400 text-4xl" />
+                </div>
+                <div className="text-center max-w-md">
+                    <h2 className="text-2xl font-bold text-slate-800 mb-2">Gestão Financeira</h2>
+                    <p className="text-slate-500 leading-relaxed">
+                        O módulo financeiro, com emissão de faturas, gráficos de receita e controle de inadimplência,
+                        está disponível a partir do
+                        <span className="font-bold text-emerald-600"> plano Start</span>.
+                    </p>
+                </div>
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm max-w-sm w-full space-y-3">
+                    <p className="text-sm font-bold text-slate-700 text-center">O que você terá acesso:</p>
+                    <ul className="space-y-2 text-sm text-slate-600">
+                        {['Emissão de faturas por consulta', 'Dashboard de receita e inadimplência', 'Gráficos de métodos de pagamento', 'Controle de status (Pago / Pendente / Cancelado)'].map(f => (
+                            <li key={f} className="flex items-center gap-2">
+                                <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0">✓</span>
+                                {f}
+                            </li>
+                        ))}
+                    </ul>
+                    <a
+                        href={`https://wa.me/5538999748911?text=${encodeURIComponent('Olá! Tenho interesse em fazer upgrade do meu plano no Sisagenda para liberar o módulo financeiro. Poderia me enviar mais informações?')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full flex items-center justify-center gap-2 py-3 mt-2 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl text-sm transition-all shadow-sm"
+                    >
+                        <FaWhatsapp className="text-lg" />
+                        Fazer Upgrade de Plano
+                    </a>
+                </div>
+            </div>
+        );
+    }
+
+    if (companyPlan === null) {
+        return <div className="flex items-center justify-center min-h-[60vh] text-slate-400">Carregando...</div>;
+    }
 
     return (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 fade-in h-4/5 flex flex-col">

@@ -47,6 +47,7 @@ const RecordsPage = () => {
 
     // Financial Integration State
     const [billingRecords, setBillingRecords] = useState([]);
+    const [companyPlan, setCompanyPlan] = useState('start'); // default allows access while loading
 
     // ─── IA: Estado de Gravação de Áudio ────────────────────────────────────────────
     const [aiConfigured, setAiConfigured] = useState(false);
@@ -83,7 +84,10 @@ const RecordsPage = () => {
         fetchInitialData();
         // Checar se a IA está configurada
         getCompanyInfo()
-            .then(res => setAiConfigured(res.data?.ai_configured || false))
+            .then(res => {
+                setAiConfigured(res.data?.ai_configured || false);
+                setCompanyPlan(res.data?.plan || 'free');
+            })
             .catch(() => {});
     }, []);
 
@@ -818,48 +822,70 @@ const RecordsPage = () => {
                             <div className="md:col-span-2 bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <input
-                                            type="checkbox"
-                                            id="integrateBilling"
-                                            className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
-                                            checked={formData.integrateBilling}
-                                            onChange={e => setFormData({ ...formData, integrateBilling: e.target.checked })}
-                                        />
-                                        <label htmlFor="integrateBilling" className="font-bold text-sm text-emerald-800 cursor-pointer">
-                                            Gerar Faturamento / Cobrança
-                                        </label>
+                                        <span className="font-bold text-sm text-emerald-800">Gerar Faturamento / Cobrança</span>
                                     </div>
                                     <span className="text-xs text-emerald-600/70 font-medium bg-emerald-100 px-2 py-0.5 rounded-full">Integração Financeira</span>
                                 </div>
 
-                                {formData.integrateBilling && (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 animate-in slide-in-from-top-2">
-                                        <div>
-                                            <label className="text-xs font-bold text-slate-600 block mb-1">Valor da Consulta (R$)</label>
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                className="form-control bg-white"
-                                                required
-                                                value={formData.billingAmount}
-                                                onChange={e => setFormData({ ...formData, billingAmount: e.target.value })}
-                                                placeholder="Ex: 250.00"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs font-bold text-slate-600 block mb-1">Método Sugerido</label>
-                                            <select
-                                                className="form-control bg-white"
-                                                value={formData.paymentMethod}
-                                                onChange={e => setFormData({ ...formData, paymentMethod: e.target.value })}
-                                            >
-                                                <option value="Cartão de Crédito">Cartão de Crédito</option>
-                                                <option value="Pix">PIX</option>
-                                                <option value="Dinheiro (Espécie)">Dinheiro</option>
-                                                <option value="Plano de Saúde (Guia)">Plano de Saúde (Guia)</option>
-                                            </select>
-                                        </div>
+                                {companyPlan === 'free' ? (
+                                    <div className="flex flex-col gap-2 mt-3">
+                                        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 font-medium">
+                                            🔒 O módulo de faturamento não está disponível no plano Free.
+                                            Faça upgrade para o plano <strong>Start</strong> ou superior.
+                                        </p>
+                                        <a
+                                            href={`https://wa.me/5538999748911?text=${encodeURIComponent('Olá! Tenho interesse em fazer upgrade do meu plano no Sisagenda para liberar o módulo financeiro. Poderia me enviar mais informações?')}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center justify-center gap-2 py-2 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg text-xs transition-all"
+                                        >
+                                            Fazer Upgrade pelo WhatsApp
+                                        </a>
                                     </div>
+                                ) : (
+                                    <>
+                                        <div className="flex items-center gap-2 mt-3">
+                                            <input
+                                                type="checkbox"
+                                                id="integrateBilling"
+                                                className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
+                                                checked={formData.integrateBilling}
+                                                onChange={e => setFormData({ ...formData, integrateBilling: e.target.checked })}
+                                            />
+                                            <label htmlFor="integrateBilling" className="font-bold text-sm text-slate-700 cursor-pointer">
+                                                Ativar cobrança para esta consulta
+                                            </label>
+                                        </div>
+                                        {formData.integrateBilling && (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 animate-in slide-in-from-top-2">
+                                                <div>
+                                                    <label className="text-xs font-bold text-slate-600 block mb-1">Valor da Consulta (R$)</label>
+                                                    <input
+                                                        type="number"
+                                                        step="0.01"
+                                                        className="form-control bg-white"
+                                                        required
+                                                        value={formData.billingAmount}
+                                                        onChange={e => setFormData({ ...formData, billingAmount: e.target.value })}
+                                                        placeholder="Ex: 250.00"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs font-bold text-slate-600 block mb-1">Método Sugerido</label>
+                                                    <select
+                                                        className="form-control bg-white"
+                                                        value={formData.paymentMethod}
+                                                        onChange={e => setFormData({ ...formData, paymentMethod: e.target.value })}
+                                                    >
+                                                        <option value="Cartão de Crédito">Cartão de Crédito</option>
+                                                        <option value="Pix">PIX</option>
+                                                        <option value="Dinheiro (Espécie)">Dinheiro</option>
+                                                        <option value="Plano de Saúde (Guia)">Plano de Saúde (Guia)</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         )}
