@@ -83,63 +83,8 @@ const Topbar = ({ toggleSidebar }) => {
                     {isDarkMode ? <FaSun className="text-lg text-yellow-500" /> : <FaMoon className="text-lg" />}
                 </button>
 
-                {/* Notifications */}
-                <div className="relative" ref={notifRef}>
-                    <button
-                        onClick={() => setNotifOpen(!notifOpen)}
-                        className="relative p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors"
-                    >
-                        <FaBell className="text-lg" />
-                        <span className="absolute top-1 right-1 block h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white"></span>
-                    </button>
-
-                    {notifOpen && (
-                        <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-slate-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                            <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                                <span className="text-sm font-semibold text-slate-800">Notificações</span>
-                                <span className="text-xs text-primary bg-primary-light px-2 py-0.5 rounded-full font-medium">3 Novas</span>
-                            </div>
-                            <div className="max-h-64 overflow-y-auto">
-                                <a href="#" className="block px-4 py-3 hover:bg-slate-50 transition-colors border-b border-slate-50">
-                                    <div className="flex gap-3">
-                                        <div className="mt-0.5 text-primary"><FaInfoCircle /></div>
-                                        <div>
-                                            <p className="text-sm text-slate-800 font-medium">Atualização do Sistema v2.0</p>
-                                            <p className="text-xs text-slate-500 mt-0.5">A nova dashboard em React está ativa.</p>
-                                            <p className="text-xs text-slate-400 mt-1">há 10 minutos</p>
-                                        </div>
-                                    </div>
-                                </a>
-                                <a href="#" className="block px-4 py-3 hover:bg-slate-50 transition-colors border-b border-slate-50">
-                                    <div className="flex gap-3">
-                                        <div className="mt-0.5 text-success"><FaCalendarCheck /></div>
-                                        <div>
-                                            <p className="text-sm text-slate-800 font-medium">Novo Agendamento</p>
-                                            <p className="text-xs text-slate-500 mt-0.5">Dr. Silva tem um novo paciente para atender.</p>
-                                            <p className="text-xs text-slate-400 mt-1">há 1 hora</p>
-                                        </div>
-                                    </div>
-                                </a>
-                                <a href="#" className="block px-4 py-3 hover:bg-slate-50 transition-colors">
-                                    <div className="flex gap-3">
-                                        <div className="mt-0.5 text-warning"><FaExclamationTriangle /></div>
-                                        <div>
-                                            <p className="text-sm text-slate-800 font-medium">Licença Expirando</p>
-                                            <p className="text-xs text-slate-500 mt-0.5">A validação das licenças CRM é necessária.</p>
-                                            <p className="text-xs text-slate-400 mt-1">há 2 dias</p>
-                                        </div>
-                                    </div>
-                                </a>
-                            </div>
-                            <div className="px-4 py-2 border-t border-slate-100 text-center bg-slate-50">
-                                <a href="#" className="text-xs font-semibold text-primary hover:text-primary-dark">Ver todas as notificações</a>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
                 {/* User Profile */}
-                <div className="relative pl-2 border-l border-slate-200" ref={profileRef}>
+                <div className="relative" ref={profileRef}>
                     <button
                         onClick={() => setProfileOpen(!profileOpen)}
                         className="flex items-center gap-2 hover:bg-slate-50 p-1.5 rounded-lg transition-colors border border-transparent hover:border-slate-200"
