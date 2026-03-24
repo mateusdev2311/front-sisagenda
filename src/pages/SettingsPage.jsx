@@ -522,9 +522,6 @@ const SettingsPage = () => {
                         <a href="#localization" className="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-xl font-medium text-sm transition-colors">
                             <FaGlobe className="text-lg text-slate-400" /> Localização e Fuso
                         </a>
-                        <a href="#api-docs" className="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-xl font-medium text-sm transition-colors">
-                            <FaCode className="text-lg text-slate-400" /> Documentação API
-                        </a>
                     </nav>
                 </div>
 
@@ -1026,32 +1023,6 @@ const SettingsPage = () => {
                                 </select>
                             </div>
                         </div>
-                    </div>
-
-                    {/* API Docs */}
-                    <div id="api-docs" className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-                        <div className="flex items-center gap-3 mb-4 border-b border-slate-100 pb-3">
-                            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-                                <FaCode className="text-blue-500 text-2xl" />
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-bold text-slate-800">Documentação Provedor (API Docs)</h3>
-                                <p className="text-xs text-slate-500">Acesso técnico para integração com sistemas de terceiros.</p>
-                            </div>
-                        </div>
-                        <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 mb-4">
-                            <p className="text-sm text-slate-600 leading-relaxed">
-                                Utilize a nossa documentação <strong>Swagger</strong> interativa para explorar os endpoints disponíveis, formatos de dados e métodos de autenticação da plataforma.
-                            </p>
-                        </div>
-                        <a
-                            href={`${axios.defaults.baseURL}/api-docs`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-full flex items-center justify-center gap-2 py-3 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-slate-200"
-                        >
-                            <FaExternalLinkAlt /> Abrir Documentação Swagger
-                        </a>
                     </div>
 
                 </div>

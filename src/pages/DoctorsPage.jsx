@@ -317,7 +317,7 @@ const DoctorsPage = () => {
                                 <th className="px-6 py-4 w-16 text-center">Cor</th>
                                 <th className="px-6 py-4">Profissional</th>
                                 <th className="px-6 py-4">Especialidade</th>
-                                <th className="px-6 py-4">CRM</th>
+                                <th className="px-6 py-4">Registro</th>
                                 <th className="px-6 py-4 text-right">Ações</th>
                             </tr>
                         </thead>
@@ -445,7 +445,7 @@ const DoctorsPage = () => {
                                 <input type="text" value={formData.specialty} onChange={e => setFormData({ ...formData, specialty: e.target.value })} required placeholder="Cardiologia" />
                             </div>
                             <div>
-                                <label>Registro CRM</label>
+                                <label>Registro Profissional</label>
                                 <input type="text" value={formData.crm} onChange={e => setFormData({ ...formData, crm: e.target.value })} required placeholder="000000-UF" />
                             </div>
                         </div>
