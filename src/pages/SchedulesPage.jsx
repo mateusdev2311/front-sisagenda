@@ -125,6 +125,7 @@ const SchedulesPage = () => {
     const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
     const [recordingConsultation, setRecordingConsultation] = useState(null); // which consultation we’re filling the record for
     const [recordData, setRecordData] = useState({ description: '', prescription: '' });
+    const [isSavingRecord, setIsSavingRecord] = useState(false);
 
     // AI Variables
     const [aiConfigured, setAiConfigured] = useState(false);
@@ -209,7 +210,8 @@ const SchedulesPage = () => {
 
     const handleSaveRecord = async (e) => {
         e.preventDefault();
-        if (!recordingConsultation) return;
+        if (!recordingConsultation || isSavingRecord) return;
+        setIsSavingRecord(true);
         const elapsed = getElapsedSeconds(recordingConsultation.startTime);
         try {
             await axios.post('/appointments/records', {
@@ -229,6 +231,8 @@ const SchedulesPage = () => {
             fetchData();
         } catch (err) {
             toast.error('Erro ao salvar prontuário.');
+        } finally {
+            setIsSavingRecord(false);
         }
     };
 
@@ -1134,7 +1138,9 @@ const SchedulesPage = () => {
                     </div>
                     <div className="modal-footer flex items-center pt-6 mt-6 border-t border-slate-100 -mx-6 -mb-6 px-6 bg-slate-50 rounded-b-xl gap-3">
                         <button type="button" className="btn-secondary ml-auto" onClick={() => setIsRecordModalOpen(false)}>Continuar Atendimento</button>
-                        <button type="submit" className="btn-primary" style={{ margin: 0 }}>Finalizar e Assinar Prontuário</button>
+                        <button type="submit" disabled={isSavingRecord} className="btn-primary" style={{ margin: 0 }}>
+                            {isSavingRecord ? 'Salvando...' : 'Finalizar e Assinar Prontuário'}
+                        </button>
                     </div>
                 </form>
             </Modal>
