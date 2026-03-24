@@ -576,6 +576,22 @@ const SettingsPage = () => {
                                         </p>
                                     </div>
                                 </div>
+
+                                {/* Upgrade Button */}
+                                {companyInfo.plan !== 'pro' && (
+                                    <div className="mt-4 pt-4 border-t border-slate-200">
+                                        <a
+                                            href={`https://wa.me/5538999748911?text=${encodeURIComponent(`Olá! Tenho interesse em fazer upgrade do meu plano no Sisagenda. Atualmente estou no plano *${companyInfo.plan || 'Free'}*. Poderia me enviar mais informações?`)}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="w-full flex items-center justify-center gap-2 py-2.5 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl text-sm transition-all shadow-sm shadow-green-200 hover:scale-[1.01]"
+                                        >
+                                            <FaWhatsapp className="text-lg" />
+                                            Fazer Upgrade de Plano
+                                        </a>
+                                        <p className="text-[11px] text-slate-400 text-center mt-2">Fale com a nossa equipe pelo WhatsApp</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
