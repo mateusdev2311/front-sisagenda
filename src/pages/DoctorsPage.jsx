@@ -334,7 +334,7 @@ const DoctorsPage = () => {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="text-sm font-semibold text-slate-800">Dr. {d.name.replace('Dr. ', '')}</div>
-                                        <div className="text-xs text-slate-500">Cadastrado em {new Date(d.created_at).toLocaleDateString()}</div>
+                                        <div className="text-xs text-slate-500">{(d.created_at && !isNaN(new Date(d.created_at))) ? `Cadastrado em ${new Date(d.created_at).toLocaleDateString()}` : ''}</div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">

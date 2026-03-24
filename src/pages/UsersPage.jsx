@@ -212,7 +212,7 @@ const UsersPage = () => {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                                        {new Date(u.created_at).toLocaleDateString()}
+                                        {(u.created_at && !isNaN(new Date(u.created_at))) ? new Date(u.created_at).toLocaleDateString() : '—'}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <div className="flex justify-end gap-2 transition-opacity">
@@ -273,7 +273,7 @@ const UsersPage = () => {
                             </div>
                             <div className="flex justify-between p-4">
                                 <span className="text-sm font-medium text-slate-500">Data de Cadastro</span>
-                                <span className="text-sm font-semibold text-slate-800">{new Date(currentUser.created_at).toLocaleString()}</span>
+                                <span className="text-sm font-semibold text-slate-800">{(currentUser.created_at && !isNaN(new Date(currentUser.created_at))) ? new Date(currentUser.created_at).toLocaleString() : '—'}</span>
                             </div>
                         </div>
                     </div>
