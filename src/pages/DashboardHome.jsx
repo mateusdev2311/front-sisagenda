@@ -35,7 +35,7 @@ const DashboardHome = () => {
         const load = async () => {
             setLoading(true);
             try {
-                const [a, d, p, b, r] = await Promise.all([
+                const [a, d, p, b, r, c] = await Promise.all([
                     axios.get('/appointments'),
                     axios.get('/doctors'),
                     axios.get('/patients'),
