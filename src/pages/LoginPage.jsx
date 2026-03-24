@@ -30,7 +30,9 @@ const LoginPage = () => {
                 setError('Login failed: No token received.');
             }
         } catch (err) {
-            if (err.response && err.response.status === 401) {
+            if (err.response?.status === 429) {
+                setError('Muitas tentativas de login. Aguarde alguns minutos e tente novamente.');
+            } else if (err.response && err.response.status === 401) {
                 setError('Credenciais inválidas');
             } else if (err.response && err.response.status === 403) {
                 setError('Sistema bloqueado. Por favor, entre em contato com o suporte para verificar sua assinatura.');
