@@ -190,7 +190,14 @@ const PatientsPage = () => {
                             .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Remove acentos
                         
                         const finalKey = fieldMapping[rawKey] || rawKey;
-                        newItem[finalKey] = item[key];
+                        let val = item[key];
+                        
+                        // Forçar string para campos que o backend exige string explícita (telefone, cpf, cep)
+                        if (['number', 'cpf', 'zip_code'].includes(finalKey) && val !== undefined && val !== null) {
+                            val = String(val);
+                        }
+
+                        newItem[finalKey] = val;
                     });
                     return newItem;
                 });
