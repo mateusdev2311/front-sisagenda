@@ -17,6 +17,8 @@ const PatientsPage = () => {
      * @property {Object} formData - Vinculado aos inputs do formulário para criar o registro de um novo paciente.
      */
     const [patients, setPatients] = useState([]);
+    const [totalItems, setTotalItems] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isViewing, setIsViewing] = useState(false);
     const [currentPatient, setCurrentPatient] = useState(null);
@@ -36,26 +38,46 @@ const PatientsPage = () => {
      * Ciclo de Vida do Componente
      * Carrega os dados dos pacientes imediatamente ao navegar para esta página.
      */
-    useEffect(() => {
-        fetchPatients();
-    }, []);
-
     /**
      * API: GET /patients
-     * Busca a lista principal listando todos os pacientes.
-     * Formato Esperado de Resposta (Array): [{ id, name, gender, birth_date, phone, email, ... }]
+     * Busca a lista principal paginada.
      */
-    const fetchPatients = async () => {
+    const fetchPatients = async (page = currentPage, search = searchTerm) => {
         try {
             setIsLoading(true);
-            const res = await axios.get('/patients');
-            setPatients(res.data);
+            const res = await axios.get('/patients', {
+                params: {
+                    page,
+                    limit: ITEMS_PER_PAGE,
+                    search: search || undefined
+                }
+            });
+            // O backend novo retorna { total, pages, currentPage, data: [...] }
+            // Se for retrocompatível (array), lidamos graciosamente
+            if (res.data && res.data.data) {
+                setPatients(res.data.data);
+                setTotalPages(res.data.pages || 1);
+                setTotalItems(res.data.total || 0);
+            } else if (Array.isArray(res.data)) {
+                setPatients(res.data);
+                setTotalPages(Math.ceil(res.data.length / ITEMS_PER_PAGE));
+                setTotalItems(res.data.length);
+            } else {
+                setPatients([]);
+            }
         } catch (error) {
             toast.error('Error fetching patients');
         } finally {
             setIsLoading(false);
         }
     };
+
+    /**
+     * Trigger re-fetch when page changes
+     */
+    useEffect(() => {
+        fetchPatients(currentPage, searchTerm);
+    }, [currentPage]);
 
     const handleOpenCreate = () => {
         setIsViewing(false);
@@ -273,22 +295,18 @@ const PatientsPage = () => {
         return 'bg-slate-100 text-slate-600 border-slate-200';
     };
 
-    const filteredPatients = patients.filter(p =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (p.email && p.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (p.cpf && p.cpf.includes(searchTerm))
-    );
-
-    // Pagination Logic
-    const totalPages = Math.ceil(filteredPatients.length / ITEMS_PER_PAGE);
-    const paginatedPatients = filteredPatients.slice(
-        (currentPage - 1) * ITEMS_PER_PAGE,
-        currentPage * ITEMS_PER_PAGE
-    );
-
-    // Reset to page 1 when search term changes
+    // Removida filtragem e fatiamento no front (agora o backend cuida disso)
+    // Dispara a busca quando o usuário digitar algo (debounce simples poderia ser adicionado no futuro)
     useEffect(() => {
-        setCurrentPage(1);
+        const timer = setTimeout(() => {
+            if (currentPage !== 1) {
+                setCurrentPage(1); // O effect do currentPage se encarrega de buscar
+            } else {
+                fetchPatients(1, searchTerm);
+            }
+        }, 500); // Debounce de 500ms
+        
+        return () => clearTimeout(timer);
     }, [searchTerm]);
 
     return (
@@ -383,7 +401,7 @@ const PatientsPage = () => {
                                         </td>
                                     </tr>
                                 ))
-                            ) : paginatedPatients.map((p) => {
+                            ) : patients.map((p) => {
                                 const age = p.birth_date ? new Date().getFullYear() - new Date(p.birth_date).getFullYear() : 'N/A';
                                 return (
                                     <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group">
@@ -430,7 +448,7 @@ const PatientsPage = () => {
                                     </tr>
                                 )
                             })}
-                            {!isLoading && filteredPatients.length === 0 && (
+                            {!isLoading && patients.length === 0 && (
                                 <tr>
                                     <td colSpan="4" className="px-6 py-12 text-center text-slate-500">
                                         <div className="flex flex-col items-center justify-center">

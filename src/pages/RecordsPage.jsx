@@ -123,10 +123,10 @@ const RecordsPage = () => {
     const fetchInitialData = async () => {
         try {
             const [patRes, docRes] = await Promise.all([
-                axios.get('/patients'),
+                axios.get('/patients?limit=5000'),
                 axios.get('/doctors')
             ]);
-            setPatients(patRes.data);
+            setPatients(patRes.data.data || patRes.data || []);
             setDoctors(docRes.data);
         } catch (error) {
             console.error('Initial records data error', error);
@@ -141,10 +141,10 @@ const RecordsPage = () => {
             setIsLoadingRecords(true);
             const [recRes, appRes] = await Promise.all([
                 axios.get('/records'),
-                axios.get('/appointments')
+                axios.get('/appointments?limit=5000')
             ]);
 
-            const allAppointments = appRes.data || [];
+            const allAppointments = appRes.data.data || appRes.data || [];
             const matchingApps = allAppointments.filter(app => String(app.patient_id || app.user_id) === String(patientId));
             setPatientAppointments(matchingApps);
 

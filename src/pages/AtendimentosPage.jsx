@@ -46,14 +46,14 @@ const AtendimentosPage = () => {
         try {
             const t = Date.now();
             const [appRes, docRes, patRes, recRes] = await Promise.all([
-                axios.get(`/appointments?t=${t}`),
+                axios.get(`/appointments?t=${t}&limit=5000`),
                 axios.get(`/doctors?t=${t}`),
-                axios.get(`/patients?t=${t}`),
+                axios.get(`/patients?t=${t}&limit=5000`),
                 axios.get(`/records?t=${t}`),
             ]);
-            setAppointments(appRes.data);
+            setAppointments(appRes.data.data || appRes.data || []);
             setDoctors(docRes.data);
-            setPatients(patRes.data);
+            setPatients(patRes.data.data || patRes.data || []);
             setRecords(Array.isArray(recRes.data) ? recRes.data : []);
         } catch (e) {
             console.error('Erro ao buscar dados', e);

@@ -60,11 +60,11 @@ const FinancialPage = () => {
         try {
             // Buscar pacientes e agendamentos para referência visual
             const [appRes, patRes] = await Promise.all([
-                axios.get('/appointments'),
-                axios.get('/patients')
+                axios.get('/appointments?limit=5000'),
+                axios.get('/patients?limit=5000')
             ]);
-            setAppointments(appRes.data);
-            setPatients(patRes.data);
+            setAppointments(appRes.data.data || appRes.data || []);
+            setPatients(patRes.data.data || patRes.data || []);
 
             // Buscar dados reais da API de faturamento
             const billingRes = await axios.get('/billing');

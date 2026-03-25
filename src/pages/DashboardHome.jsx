@@ -21,9 +21,9 @@ const toLocalYYYYMMDD = (date) => {
 // ─── Fetchers (separados para o React Query cachear individualmente) ──────────
 
 const fetchAll = () => Promise.all([
-    axios.get('/appointments').then(r => r.data || []),
+    axios.get('/appointments?limit=5000').then(r => r.data.data || r.data || []),
     axios.get('/doctors').then(r => r.data || []),
-    axios.get('/patients').then(r => r.data || []),
+    axios.get('/patients?limit=5000').then(r => r.data.data || r.data || []),
     axios.get('/billing').then(r => r.data || []),
     axios.get('/records').then(r => Array.isArray(r.data) ? r.data : []),
     axios.get('/company/me').then(r => r.data?.plan || 'free').catch(() => 'free'),
