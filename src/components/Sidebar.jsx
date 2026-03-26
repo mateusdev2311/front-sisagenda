@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { FaHeartbeat, FaTachometerAlt, FaUsers, FaUserMd, FaUserInjured, FaCalendarAlt, FaFileMedicalAlt, FaCog, FaBuilding, FaStethoscope, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaHeartbeat, FaTachometerAlt, FaUsers, FaUserMd, FaUserInjured, FaCalendarAlt, FaFileMedicalAlt, FaBullhorn, FaCog, FaBuilding, FaStethoscope, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
     const [isCollapsed, setIsCollapsed] = useState(true);
@@ -102,6 +102,12 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                                 <NavLink to="/records" className={linkClass} title="Prontuários Clínicos">
                                     <FaFileMedicalAlt className={`text-lg opacity-80 ${isCollapsed ? 'mx-auto' : ''}`} /> 
                                     {!isCollapsed && <span>Prontuários Clínicos</span>}
+                                </NavLink>
+                            </li>
+                            <li>
+                                <NavLink to="/follow-ups" className={linkClass} title="Pós-Atendimento">
+                                    <FaBullhorn className={`text-lg opacity-80 text-orange-400 ${isCollapsed ? 'mx-auto' : ''}`} /> 
+                                    {!isCollapsed && <span>Pós-Atendimento</span>}
                                 </NavLink>
                             </li>
 

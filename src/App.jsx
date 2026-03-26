@@ -12,6 +12,7 @@ import FinancialPage from './pages/FinancialPage';
 import SettingsPage from './pages/SettingsPage';
 import AdminCompaniesPage from './pages/AdminCompaniesPage';
 import AtendimentosPage from './pages/AtendimentosPage';
+import FollowUpsPage from './pages/FollowUpsPage';
 import LandingPage from './pages/LandingPage';
 import './index.css';
 import './api/axiosConfig';
@@ -55,6 +56,7 @@ function App() {
           <Route path="/schedules" element={<SchedulesPage />} />
           <Route path="/atendimentos" element={<AtendimentosPage />} />
           <Route path="/records" element={<RecordsPage />} />
+          <Route path="/follow-ups" element={<FollowUpsPage />} />
           <Route path="/financial" element={<FinancialPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/admin/clinicas" element={<SuperAdminRoute><AdminCompaniesPage /></SuperAdminRoute>} />

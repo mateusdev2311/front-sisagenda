@@ -116,6 +116,9 @@ const SettingsPage = () => {
         is_official_api: false,
         whatsapp_message_text: '',
         whatsapp_template_id: '',
+        followup_active: false,
+        followup_days: 7,
+        followup_message_template: '',
     });
     const [isSavingIntegration, setIsSavingIntegration] = useState(false);
     const [testPhone, setTestPhone] = useState('');
@@ -130,6 +133,13 @@ const SettingsPage = () => {
     const [waTestText, setWaTestText] = useState('Olá! Mensagem de teste enviada pelo Sisagenda. ✅');
     const [waMessageTemplate, setWaMessageTemplate] = useState('');
     const [isSavingWaTemplate, setIsSavingWaTemplate] = useState(false);
+    
+    // Follow-ups Evolution State
+    const [waFollowupActive, setWaFollowupActive] = useState(false);
+    const [waFollowupDays, setWaFollowupDays] = useState(7);
+    const [waFollowupTemplate, setWaFollowupTemplate] = useState('');
+    const [isSavingWaFollowup, setIsSavingWaFollowup] = useState(false);
+
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', type: 'primary', onConfirm: null });
     const pollingRef = useRef(null);
 
@@ -173,6 +183,9 @@ const SettingsPage = () => {
                         is_official_api: data.is_official_api || false,
                         whatsapp_message_text: data.whatsapp_message_text || '',
                         whatsapp_template_id: data.whatsapp_template_id || '',
+                        followup_active: data.followup_active || false,
+                        followup_days: data.followup_days || 7,
+                        followup_message_template: data.followup_message_template || '',
                     });
                 }
             })
@@ -184,6 +197,9 @@ const SettingsPage = () => {
                 setWaInstance(res.data);
                 setWaStatus(res.data.status || 'close');
                 setWaMessageTemplate(res.data.message_template || '');
+                setWaFollowupActive(res.data.followup_active || false);
+                setWaFollowupDays(res.data.followup_days || 7);
+                setWaFollowupTemplate(res.data.followup_message_template || '');
             })
             .catch(() => setWaInstance(null));
 
@@ -328,6 +344,29 @@ const SettingsPage = () => {
         }
     };
 
+    // ─── WhatsApp: salvar template de pós-atendimento ────────────────────────
+    const handleSaveWaFollowup = async () => {
+        setIsSavingWaFollowup(true);
+        try {
+            await axios.patch('/whatsapp/instance/followup', {
+                followup_active: waFollowupActive,
+                followup_days: waFollowupDays,
+                followup_message_template: waFollowupTemplate,
+            });
+            toast.success('Configurações de pós-atendimento salvas!');
+            setWaInstance(prev => ({
+                ...prev,
+                followup_active: waFollowupActive,
+                followup_days: waFollowupDays,
+                followup_message_template: waFollowupTemplate,
+            }));
+        } catch (err) {
+            toast.error(err.response?.data?.error || 'Erro ao salvar pós-atendimento.');
+        } finally {
+            setIsSavingWaFollowup(false);
+        }
+    };
+
     // ─── WhatsApp: remover instância ──────────────────────────────────────────
     const handleDeleteInstance = async () => {
         setConfirmDialog({
@@ -378,6 +417,9 @@ const SettingsPage = () => {
                         is_official_api: false,
                         whatsapp_message_text: '',
                         whatsapp_template_id: '',
+                        followup_active: false,
+                        followup_days: 7,
+                        followup_message_template: '',
                     });
                     setTestPhone('');
                     toast.success('Integração Kentro removida com sucesso.');
@@ -436,6 +478,9 @@ const SettingsPage = () => {
                 is_official_api: integration.is_official_api,
                 whatsapp_message_text: integration.is_official_api ? '' : integration.whatsapp_message_text,
                 whatsapp_template_id: integration.is_official_api ? integration.whatsapp_template_id : '',
+                followup_active: integration.followup_active,
+                followup_days: Number(integration.followup_days),
+                followup_message_template: integration.followup_message_template,
             };
             if (integrationId) {
                 await axios.put(`/integrations/${integrationId}`, payload);
@@ -705,6 +750,43 @@ const SettingsPage = () => {
                                     </label>
                                 </div>
 
+                                {/* Follow-ups Kentro */}
+                                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                                {integration.followup_active 
+                                                    ? <FaToggleOn className="text-green-500 text-lg" /> 
+                                                    : <FaToggleOff className="text-slate-400 text-lg" />
+                                                }
+                                                Pós-Atendimento (Follow-up)
+                                            </h4>
+                                            <p className="text-xs text-slate-500 mt-1">Dispare mensagens de pesquisa de satisfação.</p>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer ml-4 shrink-0">
+                                            <input type="checkbox" className="sr-only peer" checked={integration.followup_active} onChange={e => setIntegration({ ...integration, followup_active: e.target.checked })} />
+                                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                                        </label>
+                                    </div>
+                                    {integration.followup_active && (
+                                        <div className="animate-in fade-in zoom-in duration-300 pt-2 border-t border-slate-100 grid grid-cols-1 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-bold text-slate-700 mb-1">Dias após consulta para follow-up</label>
+                                                <input type="number" min="1" className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 focus:ring-2 focus:ring-green-500/20 outline-none text-sm" value={integration.followup_days} onChange={e => setIntegration({ ...integration, followup_days: Number(e.target.value) })} />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-bold text-slate-700 mb-1">Template da Mensagem</label>
+                                                <textarea className="w-full px-4 py-3 border border-slate-200 rounded-lg bg-white text-slate-900 focus:ring-2 focus:ring-green-500/20 outline-none resize-none h-24 text-sm" value={integration.followup_message_template} onChange={e => setIntegration({ ...integration, followup_message_template: e.target.value })} placeholder="Olá {nome_paciente}, como está se sentindo?" />
+                                                <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                                                    Tags sugeridas: <code className="bg-slate-200 px-1 py-0.5 rounded mx-1">{'{nome_paciente}'}</code>
+                                                    <code className="bg-slate-200 px-1 py-0.5 rounded mx-1">{'{nome_medico}'}</code>
+                                                    <code className="bg-slate-200 px-1 py-0.5 rounded mx-1">{'{data}'}</code>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
                                 <button type="button" onClick={handleSaveIntegration} disabled={isSavingIntegration} className="w-full flex items-center justify-center gap-2 py-2 bg-green-500 hover:bg-green-600 disabled:opacity-60 text-white font-bold rounded-lg transition-colors">
                                     <FaSave /> {isSavingIntegration ? 'Salvando...' : integrationId ? 'Atualizar Integração' : 'Cadastrar Integração'}
                                 </button>
@@ -886,6 +968,57 @@ const SettingsPage = () => {
                                                 <code className="bg-slate-200 px-1 py-0.5 rounded mx-1">{'{hora}'}</code>
                                             </p>
                                         </div>
+
+                                        {/* Pós Atendimento Evolution */}
+                                        <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 animate-in fade-in duration-300">
+                                            <div className="flex justify-between items-start mb-3">
+                                                <div className="flex-1">
+                                                    <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                                        {waFollowupActive 
+                                                            ? <FaToggleOn className="text-emerald-500 text-lg" /> 
+                                                            : <FaToggleOff className="text-slate-400 text-lg" />
+                                                        }
+                                                        Pós-Atendimento (Follow-up)
+                                                    </h4>
+                                                    <p className="text-xs text-slate-500 mt-1">Dispare pesquisas de satisfação e retornos na tela de Pós-Atendimento.</p>
+                                                </div>
+                                                <label className="relative inline-flex items-center cursor-pointer ml-4 shrink-0 mt-1">
+                                                    <input type="checkbox" className="sr-only peer" checked={waFollowupActive} onChange={e => setWaFollowupActive(e.target.checked)} />
+                                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                                                </label>
+                                            </div>
+
+                                            {waFollowupActive && (
+                                                <div className="space-y-4 pt-3 border-t border-slate-200">
+                                                    <div>
+                                                        <label className="block text-sm font-bold text-slate-700 mb-1">Dias após consulta</label>
+                                                        <input type="number" min="1" className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white text-slate-900 focus:ring-2 focus:ring-emerald-500/20 outline-none text-sm" value={waFollowupDays} onChange={e => setWaFollowupDays(Number(e.target.value))} />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-bold text-slate-700 mb-1">Template da Mensagem</label>
+                                                        <textarea className="w-full px-4 py-3 border border-slate-200 rounded-lg bg-white text-slate-900 focus:ring-2 focus:ring-emerald-500/20 outline-none resize-none h-24 text-sm" value={waFollowupTemplate} onChange={e => setWaFollowupTemplate(e.target.value)} placeholder="Olá {nome_paciente}, aqui é da clínica..." />
+                                                        <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                                                            Tags sugeridas: <code className="bg-slate-200 px-1 py-0.5 rounded mx-1">{'{nome_paciente}'}</code>
+                                                            <code className="bg-slate-200 px-1 py-0.5 rounded mx-1">{'{nome_medico}'}</code>
+                                                            <code className="bg-slate-200 px-1 py-0.5 rounded mx-1">{'{data}'}</code>
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            
+                                            <div className="mt-4 flex justify-end">
+                                                <button 
+                                                    type="button"
+                                                    onClick={handleSaveWaFollowup} 
+                                                    disabled={isSavingWaFollowup} 
+                                                    className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 text-white font-bold rounded shadow-sm text-xs transition-colors"
+                                                >
+                                                    {isSavingWaFollowup ? <FaSpinner className="animate-spin" /> : <FaSave />}
+                                                    {isSavingWaFollowup ? 'Salvando...' : 'Salvar Pós-Atendimento'}
+                                                </button>
+                                            </div>
+                                        </div>
+
 
                                         {/* Teste de mensagem */}
                                         {waConnected && (

@@ -94,6 +94,7 @@ const AtendimentosPage = () => {
             patientId: app.patient_id || app.user_id,
             doctorId: app.doctor_id,
             startTime: Date.now(),
+            is_return: !!app.is_return
         };
         persistConsultations([...activeConsultations, entry]);
         toast.success('Atendimento iniciado!', { icon: '⏱️' });
@@ -231,7 +232,12 @@ const AtendimentosPage = () => {
                                 </div>
                                 <div>
                                     <p className="font-bold text-slate-800 text-sm leading-tight">{pat?.name || 'Paciente desconhecido'}</p>
-                                    <p className="text-xs text-slate-400">c/ Dr. {doc?.name?.replace('Dr. ', '') || '—'}</p>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                        <p className="text-xs text-slate-400">c/ Dr. {doc?.name?.replace('Dr. ', '') || '—'}</p>
+                                        {app.is_return && (
+                                            <span className="text-[10px] bg-indigo-100 text-indigo-700 font-bold px-1.5 py-0.5 rounded border border-indigo-200 uppercase tracking-tighter">Retorno</span>
+                                        )}
+                                    </div>
                                     <p className="text-[11px] text-slate-400 font-mono mt-0.5">
                                         {String(appTime.getHours()).padStart(2,'0')}:{String(appTime.getMinutes()).padStart(2,'0')}
                                     </p>

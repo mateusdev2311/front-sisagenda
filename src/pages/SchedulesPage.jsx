@@ -86,7 +86,12 @@ const FloatingConsultationPanel = ({ activeConsultations, patients, doctors, rec
                                 {pat?.name?.charAt(0) || '?'}
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className="font-bold text-slate-800 text-xs truncate leading-tight">{pat?.name || 'Paciente'}</p>
+                                <div className="flex items-center gap-1.5">
+                                    <p className="font-bold text-slate-800 text-xs truncate leading-tight">{pat?.name || 'Paciente'}</p>
+                                    {c.is_return && (
+                                        <span className="text-[9px] bg-indigo-100 text-indigo-700 font-bold px-1 rounded border border-indigo-200 uppercase tracking-tighter">R</span>
+                                    )}
+                                </div>
                                 <p className="text-[10px] text-slate-400 leading-tight">Dr. {doc?.name?.replace('Dr. ', '') || '—'}</p>
                             </div>
                             <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 rounded-lg px-2 py-1 flex-shrink-0">
@@ -246,6 +251,7 @@ const SchedulesPage = () => {
         notes: '',
         billingValue: '',
         billingMethod: '',
+        is_return: false,
     });
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', type: 'primary', onConfirm: null });
     const [isResending, setIsResending] = useState(false);
@@ -357,7 +363,7 @@ const SchedulesPage = () => {
 
     const handleOpenCreate = () => {
         setEditingId(null);
-        setFormData({ doctor_id: '', patient_id: '', date: '', notes: '', billingValue: '', billingMethod: '' });
+        setFormData({ doctor_id: '', patient_id: '', date: '', notes: '', billingValue: '', billingMethod: '', is_return: false });
         setIsModalOpen(true);
     };
 
@@ -379,6 +385,7 @@ const SchedulesPage = () => {
             billingMethod: '',
             lembrete_enviado: app.lembrete_enviado || false,
             lembrete_enviado_em: app.lembrete_enviado_em || null,
+            is_return: !!app.is_return,
         });
         setIsModalOpen(true);
     };
@@ -451,7 +458,8 @@ const SchedulesPage = () => {
             appointmentId: editingId,
             patientId: formData.patient_id,
             doctorId: formData.doctor_id,
-            startTime: Date.now()
+            startTime: Date.now(),
+            is_return: !!formData.is_return
         };
         const updated = [...activeConsultations, consultationData];
         localStorage.setItem('activeConsultations', JSON.stringify(updated));
@@ -585,7 +593,8 @@ const SchedulesPage = () => {
                             doctor_id: Number(formData.doctor_id),
                             patient_id: Number(activePatientId),
                             date: finalDateStr,
-                            notes: formData.notes
+                            notes: formData.notes,
+                            is_return: !!formData.is_return
                         });
                         if (putRes.data && typeof putRes.data === 'object') {
                             setAppointments(prev => prev.map(a => String(a.id) === String(editingId) ? { ...a, ...putRes.data[1]?.[0], ...putRes.data } : a));
@@ -595,7 +604,8 @@ const SchedulesPage = () => {
                             doctor_id: Number(formData.doctor_id),
                             patient_id: Number(activePatientId),
                             date: finalDateStr,
-                            notes: formData.notes
+                            notes: formData.notes,
+                            is_return: !!formData.is_return
                         });
                         savedApptId = postRes.data?.id; // Assumes server returns inserted ID
                         if (postRes.data) {
@@ -799,6 +809,17 @@ const SchedulesPage = () => {
                             <h4 className="font-bold text-primary-dark">Motor de Agendamento</h4>
                             <div className="flex items-center gap-2 flex-wrap">
                                 <p className="text-xs text-primary/80">Selecione médico, paciente e slot de tempo (horário).</p>
+                                
+                                <label className="inline-flex items-center gap-2 bg-indigo-50 px-3 py-1 rounded-full cursor-pointer hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm">
+                                    <input 
+                                        type="checkbox" 
+                                        className="w-4 h-4 text-indigo-600 border-indigo-300 rounded focus:ring-indigo-500"
+                                        checked={formData.is_return}
+                                        onChange={e => setFormData({ ...formData, is_return: e.target.checked })}
+                                    />
+                                    <span className="text-[11px] font-bold text-indigo-700 uppercase tracking-tight">Consulta de Retorno</span>
+                                </label>
+
                                 {editingId && formData.lembrete_enviado && (
                                     <span
                                         className="inline-flex items-center gap-1 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full"
