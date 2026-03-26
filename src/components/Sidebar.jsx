@@ -1,9 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { FaHeartbeat, FaTachometerAlt, FaUsers, FaUserMd, FaUserInjured, FaCalendarAlt, FaFileMedicalAlt, FaBullhorn, FaCog, FaBuilding, FaStethoscope, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaHeartbeat, FaTachometerAlt, FaUsers, FaUserMd, FaUserInjured, FaCalendarAlt, FaFileMedicalAlt, FaBullhorn, FaCog, FaBuilding, FaStethoscope, FaChevronLeft, FaChevronRight, FaLock } from 'react-icons/fa';
+import { getCompanyInfo } from '../services/aiService';
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
     const [isCollapsed, setIsCollapsed] = useState(true);
+    const [companyPlan, setCompanyPlan] = useState('pro'); // Default to pro to avoid flickering, will update
+
+    useEffect(() => {
+        getCompanyInfo()
+            .then(res => setCompanyPlan(res.data?.plan || 'free'))
+            .catch(() => setCompanyPlan('free'));
+    }, []);
 
     const linkClass = ({ isActive }) =>
         `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 mt-1 overflow-hidden whitespace-nowrap ${isActive
@@ -105,17 +113,49 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                                 </NavLink>
                             </li>
                             <li>
-                                <NavLink to="/follow-ups" className={linkClass} title="Pós-Atendimento">
-                                    <FaBullhorn className={`text-lg opacity-80 text-orange-400 ${isCollapsed ? 'mx-auto' : ''}`} /> 
-                                    {!isCollapsed && <span>Pós-Atendimento</span>}
+                                <NavLink 
+                                    to="/follow-ups" 
+                                    className={linkClass}
+                                    title="Pós-Atendimento"
+                                >
+                                    <div className="relative">
+                                        <FaBullhorn className={`text-lg opacity-80 text-orange-400 ${isCollapsed ? 'mx-auto' : ''}`} /> 
+                                        {companyPlan !== 'pro' && (
+                                            <FaLock className="absolute -top-1 -right-1 text-[8px] text-slate-400 bg-white rounded-full p-0.5 border border-slate-200" />
+                                        )}
+                                    </div>
+                                    {!isCollapsed && (
+                                        <span className="flex items-center justify-between flex-1">
+                                            Pós-Atendimento
+                                            {companyPlan !== 'pro' && (
+                                                <span className="ml-2 px-1.5 py-0.5 bg-indigo-100 text-indigo-600 text-[9px] font-bold rounded uppercase tracking-tighter">PRO</span>
+                                            )}
+                                        </span>
+                                    )}
                                 </NavLink>
                             </li>
 
                             <li className={titleClass}>Financeiro</li>
                             <li>
-                                <NavLink to="/financial" className={linkClass} title="Faturamento">
-                                    <FaHeartbeat className={`text-lg opacity-80 ${isCollapsed ? 'mx-auto' : ''}`} /> 
-                                    {!isCollapsed && <span>Faturamento</span>}
+                                <NavLink 
+                                    to="/financial" 
+                                    className={linkClass} 
+                                    title="Faturamento"
+                                >
+                                    <div className="relative">
+                                        <FaHeartbeat className={`text-lg opacity-80 ${isCollapsed ? 'mx-auto' : ''}`} /> 
+                                        {companyPlan === 'free' && (
+                                            <FaLock className="absolute -top-1 -right-1 text-[8px] text-slate-400 bg-white rounded-full p-0.5 border border-slate-200" />
+                                        )}
+                                    </div>
+                                    {!isCollapsed && (
+                                        <span className="flex items-center justify-between flex-1">
+                                            Faturamento
+                                            {companyPlan === 'free' && (
+                                                <span className="ml-2 px-1.5 py-0.5 bg-emerald-100 text-emerald-600 text-[9px] font-bold rounded uppercase tracking-tighter">START</span>
+                                            )}
+                                        </span>
+                                    )}
                                 </NavLink>
                             </li>
                         </>

@@ -3,7 +3,7 @@ import {
     FaBuilding, FaGlobe, FaSave, FaWhatsapp, FaPlug, FaLink,
     FaPaperPlane, FaCode, FaExternalLinkAlt, FaInfoCircle,
     FaChevronDown, FaQrcode, FaTrash, FaCheckCircle, FaTimesCircle,
-    FaSpinner, FaToggleOn, FaToggleOff, FaBrain, FaKey,
+    FaSpinner, FaToggleOn, FaToggleOff, FaBrain, FaKey, FaLock
 } from 'react-icons/fa';
 import axios from '../api/axiosConfig';
 import toast from 'react-hot-toast';
@@ -979,16 +979,34 @@ const SettingsPage = () => {
                                                             : <FaToggleOff className="text-slate-400 text-lg" />
                                                         }
                                                         Pós-Atendimento (Follow-up)
+                                                        {companyInfo.plan !== 'pro' && (
+                                                            <span className="ml-1 px-1.5 py-0.5 bg-indigo-100 text-indigo-600 text-[9px] font-bold rounded uppercase tracking-tighter flex items-center gap-1">
+                                                                <FaLock className="text-[7px]" /> PRO
+                                                            </span>
+                                                        )}
                                                     </h4>
                                                     <p className="text-xs text-slate-500 mt-1">Dispare pesquisas de satisfação e retornos na tela de Pós-Atendimento.</p>
                                                 </div>
-                                                <label className="relative inline-flex items-center cursor-pointer ml-4 shrink-0 mt-1">
-                                                    <input type="checkbox" className="sr-only peer" checked={waFollowupActive} onChange={e => setWaFollowupActive(e.target.checked)} />
-                                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                                                <label className={`relative inline-flex items-center ${companyInfo.plan !== 'pro' ? 'cursor-not-allowed' : 'cursor-pointer'} ml-4 shrink-0 mt-1`}>
+                                                    <input 
+                                                        type="checkbox" 
+                                                        className="sr-only peer" 
+                                                        checked={waFollowupActive} 
+                                                        disabled={companyInfo.plan !== 'pro'}
+                                                        onChange={e => setWaFollowupActive(e.target.checked)} 
+                                                    />
+                                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 peer-disabled:opacity-50"></div>
                                                 </label>
                                             </div>
 
-                                            {waFollowupActive && (
+                                            {companyInfo.plan !== 'pro' && (
+                                                <div className="mt-2 text-[10px] text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-2 py-1.5 flex items-center gap-2">
+                                                    <FaInfoCircle className="flex-shrink-0" />
+                                                    O recurso de Pós-Atendimento (CRM) é exclusivo do plano PRO.
+                                                </div>
+                                            )}
+
+                                            {waFollowupActive && companyInfo.plan === 'pro' && (
                                                 <div className="space-y-4 pt-3 border-t border-slate-200">
                                                     <div>
                                                         <label className="block text-sm font-bold text-slate-700 mb-1">Dias após consulta</label>
@@ -1006,17 +1024,19 @@ const SettingsPage = () => {
                                                 </div>
                                             )}
                                             
-                                            <div className="mt-4 flex justify-end">
-                                                <button 
-                                                    type="button"
-                                                    onClick={handleSaveWaFollowup} 
-                                                    disabled={isSavingWaFollowup} 
-                                                    className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 text-white font-bold rounded shadow-sm text-xs transition-colors"
-                                                >
-                                                    {isSavingWaFollowup ? <FaSpinner className="animate-spin" /> : <FaSave />}
-                                                    {isSavingWaFollowup ? 'Salvando...' : 'Salvar Pós-Atendimento'}
-                                                </button>
-                                            </div>
+                                            {companyInfo.plan === 'pro' && (
+                                                <div className="mt-4 flex justify-end">
+                                                    <button 
+                                                        type="button"
+                                                        onClick={handleSaveWaFollowup} 
+                                                        disabled={isSavingWaFollowup} 
+                                                        className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 text-white font-bold rounded shadow-sm text-xs transition-colors"
+                                                    >
+                                                        {isSavingWaFollowup ? <FaSpinner className="animate-spin" /> : <FaSave />}
+                                                        {isSavingWaFollowup ? 'Salvando...' : 'Salvar Pós-Atendimento'}
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
 
 

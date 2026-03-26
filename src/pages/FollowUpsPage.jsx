@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import axios from '../api/axiosConfig';
 import toast from 'react-hot-toast';
-import { FaBullhorn, FaCheck, FaCheckSquare, FaRegSquare, FaPaperPlane, FaUserInjured, FaUserMd, FaCalendarCheck, FaClock, FaSpinner } from 'react-icons/fa';
+import { FaBullhorn, FaCheck, FaCheckSquare, FaRegSquare, FaPaperPlane, FaUserInjured, FaUserMd, FaCalendarCheck, FaClock, FaSpinner, FaWhatsapp, FaGem } from 'react-icons/fa';
 import Pagination from '../components/Pagination';
+import { getCompanyInfo } from '../services/aiService';
 
 const FollowUpsPage = () => {
     const [followUps, setFollowUps] = useState([]);
@@ -11,6 +12,7 @@ const FollowUpsPage = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [isLoading, setIsLoading] = useState(true);
     const [isSending, setIsSending] = useState(false);
+    const [companyPlan, setCompanyPlan] = useState(null); // null = loading
     
     // Checkbox selections
     const [selectedRows, setSelectedRows] = useState([]);
@@ -18,6 +20,10 @@ const FollowUpsPage = () => {
     const ITEMS_PER_PAGE = 20;
 
     useEffect(() => {
+        getCompanyInfo()
+            .then(res => setCompanyPlan(res.data?.plan || 'free'))
+            .catch(() => setCompanyPlan('free'));
+            
         fetchFollowUps(currentPage);
     }, [currentPage]);
 
@@ -98,7 +104,59 @@ const FollowUpsPage = () => {
         } finally {
             setIsSending(false);
         }
-    };
+    };    
+    // ── Paywall para planos que não são PRO ──────────────────────────────────
+    if (companyPlan !== null && companyPlan !== 'pro') {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[70vh] gap-6 animate-in fade-in duration-500">
+                <div className="w-20 h-20 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center relative shadow-sm">
+                    <FaBullhorn className="text-indigo-400 text-4xl" />
+                </div>
+                <div className="text-center max-w-md px-4">
+                    <h2 className="text-2xl font-bold text-slate-800 mb-2">Pós-Atendimento (CRM)</h2>
+                    <p className="text-slate-500 leading-relaxed">
+                        O módulo de pós-atendimento, com disparo em lote de pesquisas de satisfação e acompanhamento de retornos, 
+                        está disponível no
+                        <span className="font-bold text-indigo-600"> plano PRO</span>.
+                    </p>
+                </div>
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm max-w-sm w-full space-y-3">
+                    <p className="text-sm font-bold text-slate-700 text-center">O que você terá acesso:</p>
+                    <ul className="space-y-2 text-sm text-slate-600">
+                        {[
+                            'Disparo de mensagens em lote', 
+                            'Pesquisas de satisfação automáticas', 
+                            'Controle de retorno de pacientes', 
+                            'Acompanhamento pós-consulta simplificado'
+                        ].map(f => (
+                            <li key={f} className="flex items-center gap-2">
+                                <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0">✓</span>
+                                {f}
+                            </li>
+                        ))}
+                    </ul>
+                    <a
+                        href={`https://wa.me/5538999748911?text=${encodeURIComponent(`Olá! Tenho interesse em fazer upgrade do meu plano no Sisagenda para o plano PRO para liberar o módulo de Pós-Atendimento. Poderia me enviar mais informações?`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full flex items-center justify-center gap-2 py-3 mt-2 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl text-sm transition-all shadow-sm"
+                    >
+                        <FaWhatsapp className="text-lg" />
+                        Fazer Upgrade para o PRO
+                    </a>
+                </div>
+            </div>
+        );
+    }
+
+    if (companyPlan === null) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-slate-400 gap-3">
+                <FaSpinner className="animate-spin text-3xl text-primary/30" />
+                <span className="text-sm font-medium">Verificando acesso...</span>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 fade-in">
