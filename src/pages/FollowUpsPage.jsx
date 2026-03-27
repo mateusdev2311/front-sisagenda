@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { FaBullhorn, FaCheck, FaCheckSquare, FaRegSquare, FaPaperPlane, FaUserInjured, FaUserMd, FaCalendarCheck, FaClock, FaSpinner, FaWhatsapp, FaGem } from 'react-icons/fa';
 import Pagination from '../components/Pagination';
 import { getCompanyInfo } from '../services/aiService';
+import { format } from 'date-fns';
 
 const FollowUpsPage = () => {
     const [followUps, setFollowUps] = useState([]);
@@ -56,11 +57,20 @@ const FollowUpsPage = () => {
     // Formata a data (DD/MM/YYYY HH:mm)
     const formatDate = (dateString) => {
         if (!dateString) return 'Data não informada';
-        const date = new Date(dateString);
-        return new Intl.DateTimeFormat('pt-BR', {
-            day: '2-digit', month: '2-digit', year: 'numeric',
-            hour: '2-digit', minute: '2-digit'
-        }).format(date);
+        
+        // Remove o 'Z' para forçar o navegador a tratar como horário local
+        // Isso evita o deslocamento de 3 horas (UTC-3)
+        const cleanDateString = typeof dateString === 'string' && dateString.endsWith('Z') 
+            ? dateString.slice(0, -1) 
+            : dateString;
+            
+        try {
+            const date = new Date(cleanDateString);
+            return format(date, "dd/MM/yyyy HH:mm");
+        } catch (error) {
+            console.error('Error formatting date:', error);
+            return 'Data inválida';
+        }
     };
 
     // Toggle multi-select
