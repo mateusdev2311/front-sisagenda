@@ -272,7 +272,7 @@ const FollowUpsPage = () => {
                                             <td className="px-6 py-4 text-slate-600">
                                                 <div className="flex items-center gap-2">
                                                     <FaCalendarCheck className="text-slate-400 text-xs" />
-                                                    {formatDate(item.date || item.created_at)}
+                                                    {formatDate(item.finalized_at || item.date || item.created_at)}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
