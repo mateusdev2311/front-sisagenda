@@ -54,6 +54,21 @@ const FollowUpsPage = () => {
         }
     };
 
+    // Calcula dias decorridos desde a data da consulta
+    const calcDaysSince = (dateString) => {
+        if (!dateString) return 0;
+        const cleanDate = typeof dateString === 'string' && dateString.endsWith('Z')
+            ? dateString.slice(0, -1)
+            : dateString;
+        const past = new Date(cleanDate);
+        const now = new Date();
+        // Zera o horário para comparar apenas datas
+        past.setHours(0, 0, 0, 0);
+        now.setHours(0, 0, 0, 0);
+        const diffMs = now - past;
+        return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+    };
+
     // Formata a data (DD/MM/YYYY HH:mm)
     const formatDate = (dateString) => {
         if (!dateString) return 'Data não informada';
@@ -278,7 +293,7 @@ const FollowUpsPage = () => {
                                             <td className="px-6 py-4">
                                                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
                                                     <FaClock />
-                                                    Há {item.days_since_appointment || 0} dias
+                                                    Há {calcDaysSince(item.finalized_at || item.date || item.created_at)} dias
                                                 </span>
                                             </td>
                                         </tr>
