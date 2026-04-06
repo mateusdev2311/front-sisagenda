@@ -528,22 +528,53 @@ const PatientsPage = () => {
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        {/* Personal Info */}
+
+                        {/* Legenda */}
+                        <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+                            <span className="text-red-500 font-bold">*</span>
+                            <span>Campos obrigatórios</span>
+                        </div>
+
+                        {/* Dados Pessoais */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="sm:col-span-2">
-                                <label>Nome Completo</label>
-                                <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required placeholder="Nome do Paciente" />
+                                <label className="flex items-center gap-1">
+                                    Nome Completo
+                                    <span className="text-red-500 font-bold ml-0.5">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.name}
+                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                    required
+                                    placeholder="Nome do Paciente"
+                                />
                             </div>
                             <div>
-                                <label>CPF</label>
-                                <input type="text" value={formData.cpf} onChange={e => setFormData({ ...formData, cpf: e.target.value })} placeholder="000.000.000-00" />
+                                <label className="flex items-center gap-1">
+                                    CPF
+                                    <span className="text-red-500 font-bold ml-0.5">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.cpf}
+                                    onChange={e => setFormData({ ...formData, cpf: e.target.value })}
+                                    required
+                                    placeholder="000.000.000-00"
+                                />
                             </div>
                             <div>
-                                <label>Data de Nascimento</label>
+                                <label className="flex items-center gap-1">
+                                    Data de Nascimento
+                                    <span className="text-xs text-slate-400 font-normal ml-1">opcional</span>
+                                </label>
                                 <input type="date" value={formData.birth_date} onChange={e => setFormData({ ...formData, birth_date: e.target.value })} />
                             </div>
                             <div>
-                                <label>Sexo</label>
+                                <label className="flex items-center gap-1">
+                                    Sexo
+                                    <span className="text-xs text-slate-400 font-normal ml-1">opcional</span>
+                                </label>
                                 <select value={formData.gender} onChange={e => setFormData({ ...formData, gender: e.target.value })}>
                                     <option value="Male">Masculino</option>
                                     <option value="Female">Feminino</option>
@@ -552,34 +583,49 @@ const PatientsPage = () => {
                             </div>
                         </div>
 
-                        {/* Contact Info */}
+                        {/* Contato */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
-                             <div>
-                                <label>Endereço de E-mail</label>
-                                <input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder="paciente@mail.com" />
+                            <div>
+                                <label className="flex items-center gap-1">
+                                    Número de Telefone
+                                    <span className="text-red-500 font-bold ml-0.5">*</span>
+                                </label>
+                                <input
+                                    type="tel"
+                                    value={formData.number}
+                                    onChange={e => setFormData({ ...formData, number: e.target.value })}
+                                    required
+                                    placeholder="(XX) XXXXX-XXXX"
+                                />
                             </div>
                             <div>
-                                <label>Número de Telefone</label>
-                                <input type="tel" value={formData.number} onChange={e => setFormData({ ...formData, number: e.target.value })} required placeholder="(XX) XXXXX-XXXX" />
+                                <label className="flex items-center gap-1">
+                                    E-mail
+                                    <span className="text-xs text-slate-400 font-normal ml-1">opcional</span>
+                                </label>
+                                <input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder="paciente@mail.com" />
                             </div>
                         </div>
 
-                        {/* Address Info */}
-                         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2 border-t border-slate-100">
+                        {/* Endereço */}
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2 border-t border-slate-100">
                             <div className="sm:col-span-4">
-                                <label>Endereço <span className="text-xs text-slate-400 font-normal">(Rua/Avenida, Número, Complemento)</span></label>
+                                <label className="flex items-center gap-1">
+                                    Endereço
+                                    <span className="text-xs text-slate-400 font-normal ml-1">opcional — Rua/Avenida, Número, Complemento</span>
+                                </label>
                                 <input type="text" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} placeholder="Ex: Rua das Flores, 123" />
                             </div>
                             <div className="sm:col-span-2">
-                                <label>Cidade</label>
+                                <label className="flex items-center gap-1">Cidade <span className="text-xs text-slate-400 font-normal ml-1">opcional</span></label>
                                 <input type="text" value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} placeholder="São Paulo" />
                             </div>
                             <div>
-                                <label>Estado / UF</label>
+                                <label className="flex items-center gap-1">Estado / UF <span className="text-xs text-slate-400 font-normal ml-1">opcional</span></label>
                                 <input type="text" value={formData.state} onChange={e => setFormData({ ...formData, state: e.target.value })} placeholder="SP" maxLength={2} className="uppercase" />
                             </div>
                             <div>
-                                <label>CEP</label>
+                                <label className="flex items-center gap-1">CEP <span className="text-xs text-slate-400 font-normal ml-1">opcional</span></label>
                                 <input type="text" value={formData.zip_code} onChange={e => setFormData({ ...formData, zip_code: e.target.value })} placeholder="00000-000" />
                             </div>
                         </div>
