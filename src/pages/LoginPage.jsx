@@ -25,19 +25,33 @@ const LoginPage = () => {
                     localStorage.setItem('user', JSON.stringify(userReturn));
                 }
 
-                // Super admin pula a verificação de assinatura
+                // Limpar qualquer estado de onboarding pendente ao fazer login
+                localStorage.removeItem('pending_company_id');
+                localStorage.removeItem('pending_plan');
+                localStorage.removeItem('pending_email');
+                localStorage.removeItem('pending_password');
+
+                // Super admin → vai direto para o painel
                 if (userReturn?.is_super_admin) {
                     navigate('/admin/clinicas');
                     return;
                 }
 
-                // Plano parceiro também pula (sem cobrança)
-                if (userReturn?.plan === 'parceiro') {
+                // Buscar plano da empresa via /company/me (fonte mais confiável,
+                // pois userReturn pode não incluir plan para usuários não-gestores)
+                let companyPlan = userReturn?.plan;
+                try {
+                    const meRes = await axios.get('/company/me');
+                    companyPlan = meRes.data?.plan || companyPlan;
+                } catch { /* mantém plan do userReturn se falhar */ }
+
+                // Parceiro → acesso liberado sem verificação de assinatura
+                if (companyPlan === 'parceiro') {
                     navigate('/home');
                     return;
                 }
 
-                // Para gestores: verificar se a empresa tem assinatura ativa
+                // Para demais planos: verificar assinatura ativa no Asaas
                 const companyId = userReturn?.company_id;
                 if (companyId) {
                     try {
@@ -45,32 +59,15 @@ const LoginPage = () => {
                         const subStatus = subRes.data?.status;
 
                         if (!subStatus || subStatus === 'INACTIVE') {
-                            // Antes de redirecionar, verificar se é plano parceiro
-                            try {
-                                const meRes = await axios.get('/company/me');
-                                if (meRes.data?.plan === 'parceiro') {
-                                    navigate('/home');
-                                    return;
-                                }
-                            } catch { /* ignora */ }
-
                             localStorage.setItem('pending_company_id', String(companyId));
-                            localStorage.setItem('pending_plan', userReturn?.plan || 'start');
+                            localStorage.setItem('pending_plan', companyPlan || 'start');
                             navigate('/subscribe');
                             return;
                         }
                     } catch {
-                        // Subscription endpoint falhou — verificar se é plano parceiro
-                        try {
-                            const meRes = await axios.get('/company/me');
-                            if (meRes.data?.plan === 'parceiro') {
-                                navigate('/home');
-                                return;
-                            }
-                        } catch { /* ignora */ }
-
+                        // Sem assinatura → forçar pagamento
                         localStorage.setItem('pending_company_id', String(companyId));
-                        localStorage.setItem('pending_plan', userReturn?.plan || 'start');
+                        localStorage.setItem('pending_plan', companyPlan || 'start');
                         navigate('/subscribe');
                         return;
                     }
