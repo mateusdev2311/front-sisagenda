@@ -45,14 +45,30 @@ const LoginPage = () => {
                         const subStatus = subRes.data?.status;
 
                         if (!subStatus || subStatus === 'INACTIVE') {
-                            // Assinatura inativa ou ausente → forcçar pagamento
+                            // Antes de redirecionar, verificar se é plano parceiro
+                            try {
+                                const meRes = await axios.get('/company/me');
+                                if (meRes.data?.plan === 'parceiro') {
+                                    navigate('/home');
+                                    return;
+                                }
+                            } catch { /* ignora */ }
+
                             localStorage.setItem('pending_company_id', String(companyId));
                             localStorage.setItem('pending_plan', userReturn?.plan || 'start');
                             navigate('/subscribe');
                             return;
                         }
                     } catch {
-                        // Endpoint retornou erro (sem assinatura) → forcçar pagamento
+                        // Subscription endpoint falhou — verificar se é plano parceiro
+                        try {
+                            const meRes = await axios.get('/company/me');
+                            if (meRes.data?.plan === 'parceiro') {
+                                navigate('/home');
+                                return;
+                            }
+                        } catch { /* ignora */ }
+
                         localStorage.setItem('pending_company_id', String(companyId));
                         localStorage.setItem('pending_plan', userReturn?.plan || 'start');
                         navigate('/subscribe');

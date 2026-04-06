@@ -27,7 +27,9 @@ const PrivateRoute = ({ children }) => {
   const userString = localStorage.getItem('user');
   const user = userString ? JSON.parse(userString) : {};
   const hasPendingPayment = localStorage.getItem('pending_company_id');
-  const isPartner = user?.plan === 'parceiro';
+  // Verifica parceiro tanto pelo user.plan quanto pelo pending_plan (fallback para usuários sem plan no token)
+  const pendingPlan = localStorage.getItem('pending_plan');
+  const isPartner = user?.plan === 'parceiro' || pendingPlan === 'parceiro';
   if (hasPendingPayment && !user?.is_super_admin && !isPartner) {
     return <Navigate to="/subscribe" replace />;
   }
