@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 
 const WA_NUMBER = '5538999748911';
 const waLink = (plan) =>
-    `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`Oi, vim do site e estou interessado no plano ${plan}`)}`;
+    `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(plan ? `Oi, vim do site e estou interessado no plano ${plan}` : 'Oi, vim do site e gostaria de saber mais sobre o Sisagenda')}`;
 
 const IMAGES = [
     '/imagem1-sisagenda.jpeg',
@@ -31,12 +31,6 @@ const FEATURES = [
 ];
 
 const PLANS = [
-    {
-        name: 'Free', subtitle: 'Para começar', color: '#64748b', borderColor: '#e2e8f0', bgAccent: '#f8fafc',
-        features: ['1 Profissional cadastrado', 'Agendamentos ilimitados', 'Prontuário clínico', 'Visão geral do dia', 'Suporte via e-mail'],
-        locked: ['Lembretes via WhatsApp', 'IA para Prontuários', 'Dashboard avançado'],
-        cta: 'Falar sobre o plano Free', highlight: false,
-    },
     {
         name: 'Start', subtitle: 'Mais contratado', color: '#059669', borderColor: '#6ee7b7', bgAccent: '#ecfdf5',
         features: ['Até 5 profissionais', 'Agendamentos ilimitados', 'Prontuário clínico', 'Dashboard com histórico', 'WhatsApp próprio da clínica', 'Lembretes automáticos', 'Suporte prioritário'],
@@ -121,7 +115,7 @@ export default function LandingPage() {
                                 onMouseOut={e => e.target.style.color = '#475569'}
                             >Entrar</button>
                         )}
-                        <a href={waLink('Free')} target="_blank" rel="noopener noreferrer"
+                        <a href={waLink(null)} target="_blank" rel="noopener noreferrer"
                             style={{ background: '#6c5be4', color: '#fff', borderRadius: 10, padding: isMobile ? '8px 14px' : '10px 22px', fontSize: isMobile ? 13 : 14, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}
                         >{isMobile ? 'Começar' : 'Agendar demonstração'}</a>
 
@@ -182,9 +176,9 @@ export default function LandingPage() {
                     </p>
 
                     <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: isMobile ? 48 : 64, flexWrap: 'wrap' }}>
-                        <a href={waLink('Free')} target="_blank" rel="noopener noreferrer"
+                        <a href={waLink(null)} target="_blank" rel="noopener noreferrer"
                             style={{ background: '#6c5be4', color: '#fff', borderRadius: 12, padding: isMobile ? '13px 24px' : '14px 32px', fontSize: isMobile ? 14 : 15, fontWeight: 700, textDecoration: 'none', boxShadow: '0 4px 20px rgba(108,91,228,.35)', textAlign: 'center' }}
-                        >Começar agora, gratuitamente</a>
+                        >Agendar uma demonstração</a>
                         <button onClick={() => scrollTo('demo')}
                             style={{ background: 'white', color: '#475569', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: isMobile ? '13px 20px' : '14px 28px', fontSize: isMobile ? 14 : 15, fontWeight: 600, cursor: 'pointer' }}
                         >Ver demonstração</button>
@@ -300,7 +294,7 @@ export default function LandingPage() {
                         <p style={{ fontSize: isMobile ? 14 : 16, color: '#64748b' }}>Fale com nossa equipe e escolha o plano ideal para o tamanho da sua clínica.</p>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? 16 : 20 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: isMobile ? 16 : 20, maxWidth: isMobile ? '100%' : 760, margin: '0 auto' }}>
                         {PLANS.map(plan => (
                             <div key={plan.name}
                                 style={{ borderRadius: 20, overflow: 'hidden', border: plan.highlight ? `2px solid ${plan.color}` : '1.5px solid #e2e8f0', boxShadow: plan.highlight ? '0 16px 48px rgba(108,91,228,.18)' : '0 2px 12px rgba(0,0,0,.05)', background: 'white', position: 'relative' }}
@@ -353,7 +347,7 @@ export default function LandingPage() {
                     <p style={{ fontSize: isMobile ? 14 : 16, color: 'rgba(255,255,255,0.75)', marginBottom: 32, lineHeight: 1.6 }}>
                         Entre em contato com nossa equipe e configure tudo em minutos.
                     </p>
-                    <a href={waLink('Free')} target="_blank" rel="noopener noreferrer"
+                    <a href={waLink(null)} target="_blank" rel="noopener noreferrer"
                         style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'white', color: '#6c5be4', borderRadius: 12, padding: isMobile ? '13px 24px' : '14px 32px', fontSize: isMobile ? 14 : 15, fontWeight: 700, textDecoration: 'none', boxShadow: '0 4px 20px rgba(0,0,0,.15)' }}
                     >
                         <span>💬</span> Falar pelo WhatsApp
@@ -393,7 +387,7 @@ export default function LandingPage() {
                         {/* Contact */}
                         <div>
                             <p style={{ fontSize: 11, fontWeight: 700, color: '#334155', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 14 }}>Contato</p>
-                            <a href={waLink('Free')} target="_blank" rel="noopener noreferrer"
+                            <a href={waLink(null)} target="_blank" rel="noopener noreferrer"
                                 style={{ fontSize: 13, color: '#64748b', textDecoration: 'none' }}
                             >(38) 99974-8911</a>
                         </div>
