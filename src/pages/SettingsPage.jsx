@@ -152,6 +152,9 @@ const SettingsPage = () => {
     const [companyInfo, setCompanyInfo] = useState({ plan: 'free', due_date: null });
     const [subscription, setSubscription] = useState(null); // dados do Asaas
 
+    // Parceiro tem acesso equivalente ao plano Pro
+    const isPro = companyInfo.plan === 'pro' || companyInfo.plan === 'parceiro';
+
     // ─── Carregamento Inicial ─────────────────────────────────────────────────
     useEffect(() => {
         axios.get('/system-settings')
@@ -684,8 +687,8 @@ const SettingsPage = () => {
                             subtitle="Disparo automático via servidor Kentro (WhatsApp API terceirizado)"
                             badge={<StatusBadge configured={!!integrationId} label={integrationId ? 'Configurado' : 'Não configurado'} />}
                             defaultOpen={false}
-                            disabled={companyInfo.plan !== 'pro' || !!waInstance}
-                            disabledMessage={companyInfo.plan !== 'pro' ? "A integração Kentro API é um recurso exclusivo do plano PRO. Faça o upgrade para liberar os envios em massa." : "A integração via WhatsApp Próprio já está ativa. Desconecte-a primeiro para usar o Kentro e evitar disparos duplicados."}
+                            disabled={(companyInfo.plan !== 'pro' && companyInfo.plan !== 'parceiro') || !!waInstance}
+                            disabledMessage={(companyInfo.plan !== 'pro' && companyInfo.plan !== 'parceiro') ? "A integração Kentro API é um recurso exclusivo do plano PRO. Faça o upgrade para liberar os envios em massa." : "A integração via WhatsApp Próprio já está ativa. Desconecte-a primeiro para usar o Kentro e evitar disparos duplicados."}
                         >
                             <div className="space-y-4 pt-2">
                                 {/* Nome */}
@@ -1012,7 +1015,7 @@ const SettingsPage = () => {
                                                             : <FaToggleOff className="text-slate-400 text-lg" />
                                                         }
                                                         Pós-Atendimento (Follow-up)
-                                                        {companyInfo.plan !== 'pro' && (
+                                                        {(companyInfo.plan !== 'pro' && companyInfo.plan !== 'parceiro') && (
                                                             <span className="ml-1 px-1.5 py-0.5 bg-indigo-100 text-indigo-600 text-[9px] font-bold rounded uppercase tracking-tighter flex items-center gap-1">
                                                                 <FaLock className="text-[7px]" /> PRO
                                                             </span>
@@ -1020,19 +1023,19 @@ const SettingsPage = () => {
                                                     </h4>
                                                     <p className="text-xs text-slate-500 mt-1">Dispare pesquisas de satisfação e retornos na tela de Pós-Atendimento.</p>
                                                 </div>
-                                                <label className={`relative inline-flex items-center ${companyInfo.plan !== 'pro' ? 'cursor-not-allowed' : 'cursor-pointer'} ml-4 shrink-0 mt-1`}>
+                                                <label className={`relative inline-flex items-center ${!isPro ? 'cursor-not-allowed' : 'cursor-pointer'} ml-4 shrink-0 mt-1`}>
                                                     <input 
                                                         type="checkbox" 
                                                         className="sr-only peer" 
                                                         checked={waFollowupActive} 
-                                                        disabled={companyInfo.plan !== 'pro'}
+                                                        disabled={!isPro}
                                                         onChange={e => setWaFollowupActive(e.target.checked)} 
                                                     />
                                                     <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 peer-disabled:opacity-50"></div>
                                                 </label>
                                             </div>
 
-                                            {companyInfo.plan !== 'pro' && (
+                                            {(companyInfo.plan !== 'pro' && companyInfo.plan !== 'parceiro') && (
                                                 <div className="mt-2 text-[10px] text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-2 py-1.5 flex items-center gap-2">
                                                     <FaInfoCircle className="flex-shrink-0" />
                                                     O recurso de Pós-Atendimento (CRM) é exclusivo do plano PRO.
@@ -1137,7 +1140,7 @@ const SettingsPage = () => {
                             subtitle="Transcrição de consultas e geração automática de prontuários via Whisper + GPT-4o"
                             badge={<StatusBadge configured={aiConfigured} label={aiConfigured ? 'Configurado' : 'Não configurado'} />}
                             defaultOpen={false}
-                            disabled={companyInfo.plan !== 'pro'}
+                            disabled={companyInfo.plan !== 'pro' && companyInfo.plan !== 'parceiro'}
                             disabledMessage="A IA Clínica é um recurso premium exclusivo do plano PRO. Faça o upgrade para automatizar os prontuários da sua clínica!"
                         >
                             <div className="space-y-4 pt-2">

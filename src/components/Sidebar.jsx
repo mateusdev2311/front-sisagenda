@@ -13,6 +13,9 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
             .catch(() => setCompanyPlan('free'));
     }, []);
 
+    // Parceiro tem acesso a todos os recursos Pro
+    const isPro = companyPlan === 'pro' || companyPlan === 'parceiro';
+
     const linkClass = ({ isActive }) =>
         `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 mt-1 overflow-hidden whitespace-nowrap ${isActive
             ? 'bg-primary text-white shadow-md shadow-primary/20 font-medium'
@@ -120,14 +123,14 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                                 >
                                     <div className="relative">
                                         <FaBullhorn className={`text-lg opacity-80 text-orange-400 ${isCollapsed ? 'mx-auto' : ''}`} /> 
-                                        {companyPlan !== 'pro' && (
+                                        {!isPro && (
                                             <FaLock className="absolute -top-1 -right-1 text-[8px] text-slate-400 bg-white rounded-full p-0.5 border border-slate-200" />
                                         )}
                                     </div>
                                     {!isCollapsed && (
                                         <span className="flex items-center justify-between flex-1">
                                             Pós-Atendimento
-                                            {companyPlan !== 'pro' && (
+                                            {!isPro && (
                                                 <span className="ml-2 px-1.5 py-0.5 bg-indigo-100 text-indigo-600 text-[9px] font-bold rounded uppercase tracking-tighter">PRO</span>
                                             )}
                                         </span>

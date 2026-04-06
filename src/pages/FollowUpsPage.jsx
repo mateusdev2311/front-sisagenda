@@ -130,8 +130,9 @@ const FollowUpsPage = () => {
             setIsSending(false);
         }
     };    
-    // ── Paywall para planos que não são PRO ──────────────────────────────────
-    if (companyPlan !== null && companyPlan !== 'pro') {
+    // ── Paywall para planos que não são PRO (parceiro tem acesso total) ─────────
+    const isPro = companyPlan === 'pro' || companyPlan === 'parceiro';
+    if (companyPlan !== null && !isPro) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[70vh] gap-6 animate-in fade-in duration-500">
                 <div className="w-20 h-20 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center relative shadow-sm">
