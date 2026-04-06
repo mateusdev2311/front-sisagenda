@@ -272,9 +272,14 @@ const PatientsPage = () => {
             type: 'primary',
             onConfirm: async () => {
                 try {
+                    // Converte strings vazias em null para que o Zod
+                    // trate corretamente os campos com .optional().nullable()
+                    const sanitized = Object.fromEntries(
+                        Object.entries(formData).map(([k, v]) => [k, v === '' ? null : v])
+                    );
                     const payload = {
                         id: editingId || 0,
-                        ...formData
+                        ...sanitized
                     };
 
                     if (editingId) {
