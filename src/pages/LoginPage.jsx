@@ -31,6 +31,12 @@ const LoginPage = () => {
                     return;
                 }
 
+                // Plano parceiro também pula (sem cobrança)
+                if (userReturn?.plan === 'parceiro') {
+                    navigate('/home');
+                    return;
+                }
+
                 // Para gestores: verificar se a empresa tem assinatura ativa
                 const companyId = userReturn?.company_id;
                 if (companyId) {

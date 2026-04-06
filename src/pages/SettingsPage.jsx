@@ -610,25 +610,34 @@ const SettingsPage = () => {
                                             <span className={`px-3 py-1 text-xs font-bold uppercase rounded-lg shadow-sm border ${
                                                 companyInfo.plan === 'pro' ? 'bg-indigo-50 border-indigo-200 text-indigo-700' :
                                                 companyInfo.plan === 'start' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
+                                                companyInfo.plan === 'parceiro' ? 'bg-amber-50 border-amber-200 text-amber-700' :
                                                 'bg-white border-slate-200 text-slate-600'
                                             }`}>
-                                                {companyInfo.plan || 'Free'}
+                                                {companyInfo.plan === 'parceiro' ? '🤝 Parceiro' : (companyInfo.plan || 'Free')}
                                             </span>
-                                            {subscription?.status === 'ACTIVE' && (
-                                                <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">● Ativa</span>
-                                            )}
-                                            {subscription?.status === 'INACTIVE' && (
-                                                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold">○ Inativa</span>
-                                            )}
-                                            {!subscription && (
-                                                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">Sem assinatura</span>
+                                            {companyInfo.plan === 'parceiro' ? (
+                                                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">● Isento</span>
+                                            ) : (
+                                                <>
+                                                    {subscription?.status === 'ACTIVE' && (
+                                                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">● Ativa</span>
+                                                    )}
+                                                    {subscription?.status === 'INACTIVE' && (
+                                                        <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold">○ Inativa</span>
+                                                    )}
+                                                    {!subscription && (
+                                                        <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">Sem assinatura</span>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
                                     </div>
                                     <div className="text-right">
                                         <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Próxima Fatura</p>
                                         <p className="text-sm font-bold text-slate-800">
-                                            {subscription?.next_due_date
+                                            {companyInfo.plan === 'parceiro' ? (
+                                                <span className="text-amber-600">Sem cobrança</span>
+                                            ) : subscription?.next_due_date
                                                 ? new Date(subscription.next_due_date).toLocaleDateString('pt-BR')
                                                 : companyInfo.due_date
                                                     ? formatDueDate(companyInfo.due_date)
@@ -638,8 +647,8 @@ const SettingsPage = () => {
                                     </div>
                                 </div>
 
-                                {/* Upgrade Button */}
-                                {companyInfo.plan !== 'pro' && (
+                                {/* Upgrade Button — oculto para parceiros */}
+                                {companyInfo.plan !== 'pro' && companyInfo.plan !== 'parceiro' && (
                                     <div className="mt-4 pt-4 border-t border-slate-200">
                                         <a
                                             href={`https://wa.me/5538999748911?text=${encodeURIComponent(`Olá! Tenho interesse em fazer upgrade do meu plano no Sisagenda. Atualmente estou no plano *${companyInfo.plan || 'Free'}*. Poderia me enviar mais informações?`)}`}

@@ -23,11 +23,12 @@ const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem('token');
   if (!token) return <Navigate to="/login" replace />;
 
-  // Se houver pagamento pendente, bloquear acesso ao dashboard (exceto super admin)
+  // Se houver pagamento pendente, bloquear acesso ao dashboard (exceto super admin e parceiros)
   const userString = localStorage.getItem('user');
   const user = userString ? JSON.parse(userString) : {};
   const hasPendingPayment = localStorage.getItem('pending_company_id');
-  if (hasPendingPayment && !user?.is_super_admin) {
+  const isPartner = user?.plan === 'parceiro';
+  if (hasPendingPayment && !user?.is_super_admin && !isPartner) {
     return <Navigate to="/subscribe" replace />;
   }
 

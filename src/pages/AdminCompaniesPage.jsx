@@ -235,9 +235,10 @@ const AdminCompaniesPage = () => {
                                         <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded-md ${
                                             c.plan === 'pro' ? 'bg-indigo-100 text-indigo-700' :
                                             c.plan === 'start' ? 'bg-emerald-100 text-emerald-700' :
+                                            c.plan === 'parceiro' ? 'bg-amber-100 text-amber-700' :
                                             'bg-slate-100 text-slate-600'
                                         }`}>
-                                            {c.plan || 'Free'}
+                                            {c.plan === 'parceiro' ? '🤝 Parceiro' : (c.plan || 'Free')}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
@@ -263,7 +264,7 @@ const AdminCompaniesPage = () => {
                                             <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title="Editar Clínica" onClick={() => handleOpenEdit(c)}>
                                                 <FaEdit />
                                             </button>
-                                            {c.asaas_subscription_id && (
+                                            {c.asaas_subscription_id && c.plan !== 'parceiro' && (
                                                 <button
                                                     className="p-2 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
                                                     title="Cancelar Assinatura Asaas"
@@ -380,6 +381,7 @@ const AdminCompaniesPage = () => {
                                     <option value="free">Free</option>
                                     <option value="start">Start</option>
                                     <option value="pro">Pro</option>
+                                    <option value="parceiro">🤝 Parceiro (Isento)</option>
                                 </select>
                             </div>
                         </div>
