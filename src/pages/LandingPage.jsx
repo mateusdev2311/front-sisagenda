@@ -117,7 +117,7 @@ export default function LandingPage() {
                         )}
                         <a href="/register"
                             style={{ background: '#6c5be4', color: '#fff', borderRadius: 10, padding: isMobile ? '8px 14px' : '10px 22px', fontSize: isMobile ? 13 : 14, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}
-                        >{isMobile ? 'Começar' : 'Agendar demonstração'}</a>
+                        >{isMobile ? 'Criar conta' : 'Escolher meu plano'}</a>
 
                         {/* Mobile hamburger */}
                         {isMobile && (
@@ -178,7 +178,7 @@ export default function LandingPage() {
                     <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: isMobile ? 48 : 64, flexWrap: 'wrap' }}>
                         <a href="/register"
                             style={{ background: '#6c5be4', color: '#fff', borderRadius: 12, padding: isMobile ? '13px 24px' : '14px 32px', fontSize: isMobile ? 14 : 15, fontWeight: 700, textDecoration: 'none', boxShadow: '0 4px 20px rgba(108,91,228,.35)', textAlign: 'center' }}
-                        >Agendar uma demonstração</a>
+                        >🚀 Criar conta e escolher plano</a>
                         <button onClick={() => scrollTo('demo')}
                             style={{ background: 'white', color: '#475569', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: isMobile ? '13px 20px' : '14px 28px', fontSize: isMobile ? 14 : 15, fontWeight: 600, cursor: 'pointer' }}
                         >Ver demonstração</button>
@@ -345,12 +345,12 @@ export default function LandingPage() {
                         Pronto para organizar sua clínica?
                     </h2>
                     <p style={{ fontSize: isMobile ? 14 : 16, color: 'rgba(255,255,255,0.75)', marginBottom: 32, lineHeight: 1.6 }}>
-                        Entre em contato com nossa equipe e configure tudo em minutos.
+                        Escolha seu plano e comece a usar agora mesmo. Configure em minutos, sem treinamento.
                     </p>
-                    <a href={waLink(null)} target="_blank" rel="noopener noreferrer"
+                    <a href="/register"
                         style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'white', color: '#6c5be4', borderRadius: 12, padding: isMobile ? '13px 24px' : '14px 32px', fontSize: isMobile ? 14 : 15, fontWeight: 700, textDecoration: 'none', boxShadow: '0 4px 20px rgba(0,0,0,.15)' }}
                     >
-                        <span>💬</span> Falar pelo WhatsApp
+                        <span>🚀</span> Criar minha conta agora
                     </a>
                 </div>
             </section>

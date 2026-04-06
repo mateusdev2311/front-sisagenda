@@ -24,10 +24,39 @@ const LoginPage = () => {
                 if (userReturn) {
                     localStorage.setItem('user', JSON.stringify(userReturn));
                 }
-                // Redirect based on role — '/' now shows the landing page
-                navigate(userReturn?.is_super_admin ? '/admin/clinicas' : '/home');
+
+                // Super admin pula a verificação de assinatura
+                if (userReturn?.is_super_admin) {
+                    navigate('/admin/clinicas');
+                    return;
+                }
+
+                // Para gestores: verificar se a empresa tem assinatura ativa
+                const companyId = userReturn?.company_id;
+                if (companyId) {
+                    try {
+                        const subRes = await axios.get(`/companies/${companyId}/subscription`);
+                        const subStatus = subRes.data?.status;
+
+                        if (!subStatus || subStatus === 'INACTIVE') {
+                            // Assinatura inativa ou ausente → forcçar pagamento
+                            localStorage.setItem('pending_company_id', String(companyId));
+                            localStorage.setItem('pending_plan', userReturn?.plan || 'start');
+                            navigate('/subscribe');
+                            return;
+                        }
+                    } catch {
+                        // Endpoint retornou erro (sem assinatura) → forcçar pagamento
+                        localStorage.setItem('pending_company_id', String(companyId));
+                        localStorage.setItem('pending_plan', userReturn?.plan || 'start');
+                        navigate('/subscribe');
+                        return;
+                    }
+                }
+
+                navigate('/home');
             } else {
-                setError('Login failed: No token received.');
+                setError('Login falhou: token não recebido.');
             }
         } catch (err) {
             if (err.response?.status === 429) {

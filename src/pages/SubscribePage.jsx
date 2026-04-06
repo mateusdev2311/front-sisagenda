@@ -41,6 +41,9 @@ export default function SubscribePage() {
     const plan = localStorage.getItem('pending_plan') || 'start';
     const planInfo = PLAN_LABELS[plan] || PLAN_LABELS.start;
 
+    // Detectar se veio de login (já tinha token antes) ou de cadastro novo
+    const isReturning = !!localStorage.getItem('token') && !localStorage.getItem('pending_password');
+
     useEffect(() => {
         if (!companyId) navigate('/register');
     }, []);
@@ -159,6 +162,26 @@ export default function SubscribePage() {
                         Finalize sua assinatura com segurança
                     </p>
                 </div>
+
+                {/* Aviso para usuário retornando sem assinatura */}
+                {isReturning && (
+                    <div style={{
+                        display: 'flex', gap: 12, alignItems: 'flex-start',
+                        background: '#fffbeb', border: '1.5px solid #fde68a',
+                        borderRadius: 14, padding: '14px 18px', marginBottom: 20,
+                    }}>
+                        <span style={{ fontSize: 20, flexShrink: 0 }}>⚠️</span>
+                        <div>
+                            <p style={{ fontSize: 13, fontWeight: 700, color: '#92400e', marginBottom: 2 }}>
+                                Assinatura necessária para acessar o sistema
+                            </p>
+                            <p style={{ fontSize: 12, color: '#a16207', lineHeight: 1.5 }}>
+                                Sua conta foi criada, mas o acesso ao dashboard exige uma assinatura ativa.
+                                Conclua o pagamento abaixo para liberar todos os recursos.
+                            </p>
+                        </div>
+                    </div>
+                )}
 
                 {/* Banner do plano */}
                 <div style={{

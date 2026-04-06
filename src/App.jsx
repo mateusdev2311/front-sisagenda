@@ -21,7 +21,17 @@ import './api/axiosConfig';
 
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem('token');
-  return token ? children : <Navigate to="/login" replace />;
+  if (!token) return <Navigate to="/login" replace />;
+
+  // Se houver pagamento pendente, bloquear acesso ao dashboard (exceto super admin)
+  const userString = localStorage.getItem('user');
+  const user = userString ? JSON.parse(userString) : {};
+  const hasPendingPayment = localStorage.getItem('pending_company_id');
+  if (hasPendingPayment && !user?.is_super_admin) {
+    return <Navigate to="/subscribe" replace />;
+  }
+
+  return children;
 };
 
 const SuperAdminRoute = ({ children }) => {
