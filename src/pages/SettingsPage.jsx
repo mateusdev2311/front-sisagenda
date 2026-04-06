@@ -150,6 +150,7 @@ const SettingsPage = () => {
 
     // ─── Dados Extras da Clínica ──────────────────────────────────────────────
     const [companyInfo, setCompanyInfo] = useState({ plan: 'free', due_date: null });
+    const [subscription, setSubscription] = useState(null); // dados do Asaas
 
     // ─── Carregamento Inicial ─────────────────────────────────────────────────
     useEffect(() => {
@@ -208,10 +209,20 @@ const SettingsPage = () => {
         getCompanyInfo()
             .then(res => {
                 setAiConfigured(res.data?.ai_configured || false);
-                setCompanyInfo({
+                const planData = {
                     plan: res.data?.plan || 'free',
                     due_date: res.data?.due_date || null
-                });
+                };
+                setCompanyInfo(planData);
+
+                // Buscar próxima fatura Asaas
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                const cid = user?.company_id;
+                if (cid) {
+                    axios.get(`/companies/${cid}/subscription`)
+                        .then(subRes => setSubscription(subRes.data))
+                        .catch(() => setSubscription(null));
+                }
             })
             .catch(() => {});
 
@@ -594,18 +605,6 @@ const SettingsPage = () => {
                                     <div>
                                         <div className="relative group flex items-center gap-1 mb-1">
                                             <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Plano Atual</p>
-                                            <FaInfoCircle className="text-slate-400 hover:text-primary cursor-help text-xs" />
-                                            
-                                            {/* Tooltip Popup */}
-                                            <div className="absolute left-0 bottom-full mb-2 w-72 bg-slate-800 text-white text-xs p-3 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
-                                                <p className="font-bold mb-2 text-slate-200 border-b border-slate-700 pb-1">O que cada plano oferece?</p>
-                                                <ul className="space-y-2">
-                                                    <li><span className="font-bold text-slate-300">Free:</span> 1 Profissional, Visão Geral Diária</li>
-                                                    <li><span className="font-bold text-emerald-400">Start:</span> Até 5 Profissionais, WhatsApp Próprio, Dashboard Avançado</li>
-                                                    <li><span className="font-bold text-indigo-400">Pro:</span> Ilimitado, IA Clínica, Integração Kentro, Multi-gestão</li>
-                                                </ul>
-                                                <div className="absolute -bottom-1 left-4 w-2 h-2 bg-slate-800 rotate-45"></div>
-                                            </div>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <span className={`px-3 py-1 text-xs font-bold uppercase rounded-lg shadow-sm border ${
@@ -615,12 +614,26 @@ const SettingsPage = () => {
                                             }`}>
                                                 {companyInfo.plan || 'Free'}
                                             </span>
+                                            {subscription?.status === 'ACTIVE' && (
+                                                <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">● Ativa</span>
+                                            )}
+                                            {subscription?.status === 'INACTIVE' && (
+                                                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold">○ Inativa</span>
+                                            )}
+                                            {!subscription && (
+                                                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">Sem assinatura</span>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Data de Vencimento</p>
+                                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Próxima Fatura</p>
                                         <p className="text-sm font-bold text-slate-800">
-                                            {companyInfo.due_date ? formatDueDate(companyInfo.due_date) : '—'}
+                                            {subscription?.next_due_date
+                                                ? new Date(subscription.next_due_date).toLocaleDateString('pt-BR')
+                                                : companyInfo.due_date
+                                                    ? formatDueDate(companyInfo.due_date)
+                                                    : '—'
+                                            }
                                         </p>
                                     </div>
                                 </div>

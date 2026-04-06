@@ -131,7 +131,7 @@ const LoginPage = () => {
                 </form>
 
                 <div className="mt-5 text-center text-sm text-slate-500">
-                    <p>Não possui uma conta? <a href="https://wa.me/5538988178623" className="font-medium text-primary hover:text-primary-dark hover:underline">Contate o Administrador</a></p>
+                    <p>Não possui uma conta? <a href="/register" className="font-medium text-primary hover:text-primary-dark hover:underline">Cadastre sua clínica</a></p>
                 </div>
             </div>
         </div>

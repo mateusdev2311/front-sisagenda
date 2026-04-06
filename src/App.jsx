@@ -14,6 +14,8 @@ import AdminCompaniesPage from './pages/AdminCompaniesPage';
 import AtendimentosPage from './pages/AtendimentosPage';
 import FollowUpsPage from './pages/FollowUpsPage';
 import LandingPage from './pages/LandingPage';
+import RegisterPage from './pages/RegisterPage';
+import SubscribePage from './pages/SubscribePage';
 import './index.css';
 import './api/axiosConfig';
 
@@ -45,6 +47,10 @@ function App() {
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<LoginPage />} />
         </Route>
+
+        {/* Public Register + Subscribe (sem AuthLayout, design próprio) */}
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/subscribe" element={<SubscribePage />} />
 
         {/* Protected Dashboard Routes */}
         <Route element={<PrivateRoute><DashboardLayout /></PrivateRoute>}>

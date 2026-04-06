@@ -115,7 +115,7 @@ export default function LandingPage() {
                                 onMouseOut={e => e.target.style.color = '#475569'}
                             >Entrar</button>
                         )}
-                        <a href={waLink(null)} target="_blank" rel="noopener noreferrer"
+                        <a href="/register"
                             style={{ background: '#6c5be4', color: '#fff', borderRadius: 10, padding: isMobile ? '8px 14px' : '10px 22px', fontSize: isMobile ? 13 : 14, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}
                         >{isMobile ? 'Começar' : 'Agendar demonstração'}</a>
 
@@ -176,7 +176,7 @@ export default function LandingPage() {
                     </p>
 
                     <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: isMobile ? 48 : 64, flexWrap: 'wrap' }}>
-                        <a href={waLink(null)} target="_blank" rel="noopener noreferrer"
+                        <a href="/register"
                             style={{ background: '#6c5be4', color: '#fff', borderRadius: 12, padding: isMobile ? '13px 24px' : '14px 32px', fontSize: isMobile ? 14 : 15, fontWeight: 700, textDecoration: 'none', boxShadow: '0 4px 20px rgba(108,91,228,.35)', textAlign: 'center' }}
                         >Agendar uma demonstração</a>
                         <button onClick={() => scrollTo('demo')}

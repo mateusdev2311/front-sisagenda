@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import axios from '../api/axiosConfig';
+import toast from 'react-hot-toast';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
-import { FaPlus, FaEye, FaTrash, FaBuilding, FaUserTie, FaSearch, FaEdit } from 'react-icons/fa';
+import { FaPlus, FaEye, FaTrash, FaBuilding, FaUserTie, FaSearch, FaEdit, FaBan } from 'react-icons/fa';
 
 const formatDueDate = (dateStr) => {
     if (!dateStr) return '';
@@ -139,6 +140,26 @@ const AdminCompaniesPage = () => {
         });
     };
 
+    const handleCancelSubscription = (company) => {
+        if (!company.asaas_subscription_id) return;
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Cancelar Assinatura Asaas',
+            message: `Tem certeza que deseja cancelar a assinatura de "${company.name}"? A clínica será suspensa automaticamente.`,
+            type: 'danger',
+            onConfirm: async () => {
+                try {
+                    await axios.delete(`/companies/${company.id}/subscription`);
+                    setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                    toast.success(`Assinatura de "${company.name}" cancelada.`);
+                    fetchCompanies();
+                } catch (error) {
+                    toast.error('Erro ao cancelar assinatura. Tente novamente.');
+                }
+            }
+        });
+    };
+
     const filteredCompanies = companies.filter(c =>
         c.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -177,6 +198,7 @@ const AdminCompaniesPage = () => {
                                 <th className="px-6 py-4">Nome da Clínica</th>
                                 <th className="px-6 py-4">Status</th>
                                 <th className="px-6 py-4">Plano</th>
+                                <th className="px-6 py-4">Assinatura</th>
                                 <th className="px-6 py-4">Vencimento</th>
                                 <th className="px-6 py-4">Criado em</th>
                                 <th className="px-6 py-4 text-right">Ações</th>
@@ -218,6 +240,15 @@ const AdminCompaniesPage = () => {
                                             {c.plan || 'Free'}
                                         </span>
                                     </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        {c.asaas_subscription_id ? (
+                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-green-50 text-green-700">
+                                                ✓ Ativa
+                                            </span>
+                                        ) : (
+                                            <span className="text-slate-400 text-xs">—</span>
+                                        )}
+                                    </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-medium">
                                         {c.due_date ? formatDueDate(c.due_date) : '—'}
                                     </td>
@@ -232,6 +263,15 @@ const AdminCompaniesPage = () => {
                                             <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title="Editar Clínica" onClick={() => handleOpenEdit(c)}>
                                                 <FaEdit />
                                             </button>
+                                            {c.asaas_subscription_id && (
+                                                <button
+                                                    className="p-2 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                                                    title="Cancelar Assinatura Asaas"
+                                                    onClick={() => handleCancelSubscription(c)}
+                                                >
+                                                    <FaBan />
+                                                </button>
+                                            )}
                                             <button className="p-2 text-slate-400 hover:text-danger hover:bg-danger/5 rounded-lg transition-colors" title="Excluir Sistema" onClick={() => handleDelete(c.id)}>
                                                 <FaTrash />
                                             </button>
