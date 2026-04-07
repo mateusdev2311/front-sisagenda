@@ -30,7 +30,7 @@ const PLANS = [
     {
         id: 'start',
         name: 'Start',
-        price: 'R$ 150/mês',
+        price: 'R$197,00/mês',
         color: '#059669',
         light: '#ecfdf5',
         border: '#6ee7b7',
@@ -45,7 +45,7 @@ const PLANS = [
     {
         id: 'pro',
         name: 'Pro',
-        price: 'R$ 200/mês',
+        price: 'R$297,00/mês',
         color: '#6c5be4',
         light: '#f5f3ff',
         border: '#a78bfa',
