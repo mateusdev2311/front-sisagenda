@@ -45,6 +45,39 @@ const PLANS = [
     },
 ];
 
+const TESTIMONIALS = [
+    {
+        name: 'Dr. Roberto Almeida',
+        role: 'Diretor Clínico',
+        text: 'Reduzimos nossas faltas em quase 40% apenas com os lembretes automáticos do WhatsApp. O sistema praticamente se paga sozinho todos os meses.',
+        avatar: '👨‍⚕️'
+    },
+    {
+        name: 'Dra. Camila Mendes',
+        role: 'Dermatologista',
+        text: 'A IA para prontuários é algo surreal. Eu gravo o áudio enquanto converso com o paciente e no final já tenho toda a evolução pronta. Economizo horas!',
+        avatar: '👩‍⚕️'
+    },
+    {
+        name: 'Clínica Bem Estar',
+        role: 'Gestão Administrativa',
+        text: 'Deixamos de usar um sistema antigo e travado. O Sisagenda é lindo, rápido e gerenciar as agendas e o faturamento de 5 médicos ficou muito mais fácil.',
+        avatar: '🏥'
+    },
+    {
+        name: 'Dr. Fernando Mota',
+        role: 'Cardiologista',
+        text: 'A facilidade de acompanhar o faturamento e as contas a receber direto do celular mudou minha vida. Está tudo integrado e muito claro.',
+        avatar: '🧑‍⚕️'
+    },
+    {
+        name: 'Ana Paula (Secretária)',
+        role: 'Consultório Odontológico',
+        text: 'Nunca foi tão rápido agendar pacientes! A interface é muito limpa e não trava. E o suporte da equipe no WhatsApp é sensacional! Recomendo muito.',
+        avatar: '👩‍💼'
+    }
+];
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
@@ -281,6 +314,41 @@ export default function LandingPage() {
                                 <div style={{ width: isMobile ? 56 : 72, height: isMobile ? 56 : 72, borderRadius: '50%', background: '#6c5be4', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: isMobile ? 20 : 28, boxShadow: '0 8px 32px rgba(108,91,228,.5)' }}>▶</div>
                             </div>
                         )}
+                    </div>
+                </div>
+            </section>
+
+            {/* ── Testimonials (Social Proof) ───────────────────── */}
+            <section style={{ padding: `${isMobile ? 56 : 80}px ${px}`, background: '#ffffff' }}>
+                <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+                    <div style={{ textAlign: 'center', marginBottom: isMobile ? 36 : 48 }}>
+                        <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#6c5be4', marginBottom: 10 }}>Prova Social</p>
+                        <h2 style={{ fontSize: isMobile ? 26 : 36, fontWeight: 800, letterSpacing: '-0.02em', color: '#0f172a', marginBottom: 8 }}>
+                            O que as clínicas estão dizendo
+                        </h2>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20 }}>
+                        {TESTIMONIALS.map((t, i) => (
+                            <div key={i} style={{ padding: 24, borderRadius: 16, border: '1px solid #f1f5f9', background: '#fafbff', display: 'flex', flexDirection: 'column' }}>
+                                {/* Stars */}
+                                <div style={{ display: 'flex', gap: 2, marginBottom: 16, color: '#fbbf24', fontSize: 14 }}>
+                                    {'★★★★★'}
+                                </div>
+                                <p style={{ fontSize: 14, color: '#334155', lineHeight: 1.6, flex: 1, marginBottom: 20 }}>
+                                    "{t.text}"
+                                </p>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12, borderTop: '1px solid #e2e8f0', paddingTop: 16 }}>
+                                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+                                        {t.avatar}
+                                    </div>
+                                    <div>
+                                        <p style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>{t.name}</p>
+                                        <p style={{ fontSize: 12, color: '#64748b' }}>{t.role}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </section>
