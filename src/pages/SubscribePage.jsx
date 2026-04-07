@@ -31,7 +31,7 @@ const maskPhone = (v) => {
     return v.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
 };
 
-const PLAN_LABELS = { start: { name: 'Start', price: 'R$ 150,00/mês', color: '#059669' }, pro: { name: 'Pro', price: 'R$ 200,00/mês', color: '#6c5be4' } };
+const PLAN_LABELS = { start: { name: 'Start', price: 'R$ 197,00/mês', color: '#059669' }, pro: { name: 'Pro', price: 'R$ 297,00/mês', color: '#6c5be4' } };
 
 // ─── Componente ──────────────────────────────────────────────────────────────
 export default function SubscribePage() {
