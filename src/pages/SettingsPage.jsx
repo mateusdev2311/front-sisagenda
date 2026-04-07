@@ -1042,7 +1042,7 @@ const SettingsPage = () => {
                                                 </div>
                                             )}
 
-                                            {waFollowupActive && companyInfo.plan === 'pro' && (
+                                            {waFollowupActive && isPro && (
                                                 <div className="space-y-4 pt-3 border-t border-slate-200">
                                                     <div>
                                                         <label className="block text-sm font-bold text-slate-700 mb-1">Dias após consulta</label>
@@ -1060,7 +1060,7 @@ const SettingsPage = () => {
                                                 </div>
                                             )}
                                             
-                                            {companyInfo.plan === 'pro' && (
+                                            {isPro && (
                                                 <div className="mt-4 flex justify-end">
                                                     <button 
                                                         type="button"
