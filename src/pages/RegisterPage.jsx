@@ -55,7 +55,7 @@ const PLANS = [
             'IA para prontuários',
             'Dashboard avançado',
             'Integração Kentro API',
-            'Suporte via WhatsApp',
+            'Suporte prioritário',
         ],
     },
 ];
