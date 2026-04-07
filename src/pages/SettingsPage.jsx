@@ -616,7 +616,7 @@ const SettingsPage = () => {
                                                 companyInfo.plan === 'parceiro' ? 'bg-amber-50 border-amber-200 text-amber-700' :
                                                 'bg-white border-slate-200 text-slate-600'
                                             }`}>
-                                                {companyInfo.plan === 'parceiro' ? '🤝 Parceiro' : (companyInfo.plan || 'Free')}
+                                                {companyInfo.plan === 'parceiro' ? 'Parceiro' : (companyInfo.plan || 'Free')}
                                             </span>
                                             {companyInfo.plan === 'parceiro' ? (
                                                 <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">● Isento</span>
