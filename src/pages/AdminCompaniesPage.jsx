@@ -238,7 +238,7 @@ const AdminCompaniesPage = () => {
                                             c.plan === 'parceiro' ? 'bg-amber-100 text-amber-700' :
                                             'bg-slate-100 text-slate-600'
                                         }`}>
-                                            {c.plan === 'parceiro' ? '🤝 Parceiro' : (c.plan || 'Free')}
+                                            {c.plan === 'parceiro' ? 'Parceiro' : (c.plan || 'Free')}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
@@ -381,7 +381,7 @@ const AdminCompaniesPage = () => {
                                     <option value="free">Free</option>
                                     <option value="start">Start</option>
                                     <option value="pro">Pro</option>
-                                    <option value="parceiro">🤝 Parceiro (Isento)</option>
+                                    <option value="parceiro">Parceiro (Isento)</option>
                                 </select>
                             </div>
                         </div>
