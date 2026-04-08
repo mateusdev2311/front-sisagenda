@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from '../api/axiosConfig';
 import Modal from '../components/Modal';
+import ConfirmModal from '../components/ConfirmModal';
 import Select from 'react-select';
 import toast from 'react-hot-toast';
-import { FaStethoscope, FaUserMd, FaClock, FaFileMedicalAlt, FaPlay, FaRobot, FaMicrophone, FaStop, FaPrescriptionBottleAlt, FaBed, FaCheckCircle } from 'react-icons/fa';
+import { FaUserMd, FaClock, FaFileMedicalAlt, FaPlay, FaRobot, FaMicrophone, FaStop, FaPrescriptionBottleAlt, FaBed, FaCheckCircle, FaBan, FaTimesCircle } from 'react-icons/fa';
 import { transcribeAudio, getCompanyInfo } from '../services/aiService';
 
 const STORAGE_KEY = 'activeConsultations';
@@ -38,8 +39,13 @@ const AtendimentosPage = () => {
     const [isRecording, setIsRecording] = useState(false);
     const [isTranscribing, setIsTranscribing] = useState(false);
     const [transcriptionResult, setTranscriptionResult] = useState(null);
+    const [activeRecordingId, setActiveRecordingId] = useState(null); // appointmentId da consulta sendo gravada
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
+
+    // Encerrar sem prontuário
+    const [isConfirmConcludeOpen, setIsConfirmConcludeOpen] = useState(false);
+    const [concludingConsultation, setConcludingConsultation] = useState(null);
 
     // ---- Data load ----
     const fetchData = async () => {
@@ -100,11 +106,21 @@ const AtendimentosPage = () => {
         toast.success('Atendimento iniciado!', { icon: '⏱️' });
     };
 
-    // ---- Finalize (open modal) ----
-    const handleFinalize = (c) => {
-        setRecordingConsultation(c);
+    // ---- Finalize (open modal) — para acionar pelo card ----
+    const handleFinalizeClick = (activeConsultation) => {
+        // Se estiver gravando ESTA consulta, para antes de abrir o modal
+        if (isRecording && activeRecordingId === activeConsultation.appointmentId) {
+            if (mediaRecorderRef.current) mediaRecorderRef.current.stop();
+            setIsRecording(false);
+            setActiveRecordingId(null);
+            // onstop vai disparar de forma assíncrona e preencher o prontuário
+        }
+        setRecordingConsultation(activeConsultation);
         setRecordData({ description: '', prescription: '' });
-        setTranscriptionResult(null);
+        // Só limpa a transcrição se não era esta consulta que estava gravando
+        if (activeRecordingId !== activeConsultation.appointmentId) {
+            setTranscriptionResult(null);
+        }
         setIsRecordModalOpen(true);
     };
 
@@ -136,7 +152,10 @@ const AtendimentosPage = () => {
     };
 
     // ---- AI recording ----
-    const handleStartRecording = async () => {
+    // consultation: objeto da activeConsultation (card) ou recordingConsultation (modal)
+    const handleStartRecording = async (consultation) => {
+        const cons = consultation || recordingConsultation;
+        if (!cons) return;
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' });
@@ -148,7 +167,7 @@ const AtendimentosPage = () => {
                 setIsTranscribing(true);
                 setTranscriptionResult(null);
                 try {
-                    const patientName = patients.find(p => String(p.id) === String(recordingConsultation?.patientId))?.name || 'Paciente';
+                    const patientName = patients.find(p => String(p.id) === String(cons.patientId))?.name || 'Paciente';
                     const res = await transcribeAudio(blob, patientName);
                     const { transcription, medical_record } = res.data;
                     setTranscriptionResult(transcription);
@@ -156,7 +175,7 @@ const AtendimentosPage = () => {
                         description: medical_record?.description || prev.description,
                         prescription: medical_record?.prescription || prev.prescription,
                     }));
-                    toast.success('Prontuário gerado pela IA!');
+                    toast.success('Prontuário gerado pela IA! Abra o modal para finalizar.', { duration: 4000, icon: '🤖' });
                 } catch (err) {
                     toast.error(err.response?.data?.error || 'Erro ao transcrever o áudio.');
                 } finally { setIsTranscribing(false); }
@@ -164,6 +183,8 @@ const AtendimentosPage = () => {
             mediaRecorderRef.current = mr;
             mr.start();
             setIsRecording(true);
+            setActiveRecordingId(cons.appointmentId);
+            setRecordingConsultation(cons);
         } catch { toast.error('Não foi possível acessar o microfone.'); }
     };
 
@@ -171,12 +192,45 @@ const AtendimentosPage = () => {
         if (mediaRecorderRef.current && isRecording) {
             mediaRecorderRef.current.stop();
             setIsRecording(false);
+            setActiveRecordingId(null);
+        }
+    };
+
+    // ---- Gravação a partir do card ----
+    const handleStartRecordingForCard = (activeConsultation) => {
+        handleStartRecording(activeConsultation);
+    };
+
+    // ---- Encerrar sem prontuário ----
+    const handleOpenConcludeConfirm = (consultation) => {
+        setConcludingConsultation(consultation);
+        setIsConfirmConcludeOpen(true);
+    };
+
+    const handleConfirmConclude = async () => {
+        if (!concludingConsultation) return;
+        try {
+            await axios.patch(`/appointments/${concludingConsultation.appointmentId}/conclude`);
+            toast.success('Atendimento encerrado sem prontuário.', { icon: '⚠️' });
+            const updated = activeConsultations.filter(
+                c => String(c.appointmentId) !== String(concludingConsultation.appointmentId)
+            );
+            persistConsultations(updated);
+            setIsConfirmConcludeOpen(false);
+            setIsRecordModalOpen(false);
+            setConcludingConsultation(null);
+            fetchData();
+        } catch (err) {
+            const msg = err.response?.data?.error || 'Erro ao encerrar atendimento.';
+            toast.error(msg);
+            throw err; // para o ConfirmModal tratar o loading
         }
     };
 
     // ---- Derived data ----
     const getActive = (app) => activeConsultations.find(c => String(c.appointmentId) === String(app.id));
     const hasRecord = (app) => records.some(r => String(r.appointmentId || r.appointment_id) === String(app.id));
+    const isConcluded = (app) => app.concluded_at != null;
 
     // Today's appointments (past or present, not too far in the future)
     const today = new Date();
@@ -199,9 +253,9 @@ const AtendimentosPage = () => {
         ? todayApps
         : todayApps.filter(a => String(a.doctor_id) === String(selectedDoctor));
 
-    const waiting = filtered.filter(a => !getActive(a) && !hasRecord(a));
+    const waiting = filtered.filter(a => !getActive(a) && !hasRecord(a) && !isConcluded(a));
     const ongoing = filtered.filter(a => !!getActive(a));
-    const done    = filtered.filter(a => hasRecord(a));
+    const done    = filtered.filter(a => hasRecord(a) || isConcluded(a));
 
     const resolvePatient = (app) => patients.find(p => String(p.id) === String(app.patient_id || app.user_id));
     const resolveDoctor  = (app) => doctors.find(d => String(d.id) === String(app.doctor_id));
@@ -245,15 +299,48 @@ const AtendimentosPage = () => {
                             </div>
 
                             {/* Right side: timer or action */}
-                            <div className="flex items-center gap-3 ml-auto">
+                            <div className="flex items-center gap-3 ml-auto flex-wrap justify-end">
                                 {status === 'ongoing' && (
                                     <>
+                                        {/* Timer */}
                                         <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-1.5">
                                             <FaClock className="text-emerald-500 text-xs animate-pulse" />
                                             <span className="font-mono font-bold text-emerald-700 text-sm">{formatTime(elapsed)}</span>
                                         </div>
+
+                                        {/* Botão de gravação (apenas se IA configurada) */}
+                                        {aiConfigured && (
+                                            activeRecordingId === active.appointmentId ? (
+                                                isTranscribing ? (
+                                                    <button disabled
+                                                        className="flex items-center gap-2 px-3 py-2 bg-violet-100 text-violet-500 font-bold rounded-xl text-sm opacity-80 cursor-not-allowed border border-violet-200"
+                                                    >
+                                                        <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                                                        IA processando…
+                                                    </button>
+                                                ) : (
+                                                    <button onClick={handleStopRecording}
+                                                        className="flex items-center gap-2 px-3 py-2 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl text-sm transition-all animate-pulse shadow-sm shadow-red-200"
+                                                        title="Parar gravação e transcrever"
+                                                    >
+                                                        <FaStop className="text-xs" /> Parar Gravação
+                                                    </button>
+                                                )
+                                            ) : (
+                                                <button
+                                                    onClick={() => handleStartRecordingForCard(active)}
+                                                    disabled={isRecording || isTranscribing}
+                                                    className="flex items-center gap-2 px-3 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl text-sm transition-all hover:scale-105 shadow-sm shadow-violet-300"
+                                                    title={isRecording ? 'Já existe uma gravação em andamento' : 'Gravar consulta para transcrição por IA'}
+                                                >
+                                                    <FaMicrophone className="text-xs" /> Gravar
+                                                </button>
+                                            )
+                                        )}
+
+                                        {/* Botão Finalizar */}
                                         <button
-                                            onClick={() => handleFinalize(active)}
+                                            onClick={() => handleFinalizeClick(active)}
                                             className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl text-sm transition-all hover:scale-105 shadow-sm shadow-emerald-200"
                                         >
                                             <FaFileMedicalAlt /> Finalizar
@@ -269,9 +356,15 @@ const AtendimentosPage = () => {
                                     </button>
                                 )}
                                 {status === 'done' && (
-                                    <span className="flex items-center gap-1.5 text-xs font-bold text-slate-400 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-                                        <FaCheckCircle className="text-emerald-400" /> Prontuário Salvo
-                                    </span>
+                                    hasRecord(app) ? (
+                                        <span className="flex items-center gap-1.5 text-xs font-bold text-slate-400 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                                            <FaCheckCircle className="text-emerald-400" /> Prontuário Salvo
+                                        </span>
+                                    ) : (
+                                        <span className="flex items-center gap-1.5 text-xs font-bold text-amber-500 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                                            <FaTimesCircle className="text-amber-400" /> Encerrado s/ Prontuário
+                                        </span>
+                                    )
                                 )}
                             </div>
                         </div>
@@ -454,14 +547,35 @@ const AtendimentosPage = () => {
                         </div>
                     </div>
 
-                    <div className="modal-footer flex items-center pt-5 mt-5 border-t border-slate-100 -mx-6 -mb-6 px-6 bg-slate-50 rounded-b-xl gap-3">
-                        <button type="button" className="btn-secondary ml-auto" onClick={() => setIsRecordModalOpen(false)}>Continuar Depois</button>
+                    <div className="modal-footer flex items-center pt-5 mt-5 border-t border-slate-100 -mx-6 -mb-6 px-6 bg-slate-50 rounded-b-xl gap-3 flex-wrap">
+                        <button type="button" className="btn-secondary" onClick={() => setIsRecordModalOpen(false)}>Continuar Depois</button>
+                        {/* Encerrar sem prontuário */}
+                        <button
+                            type="button"
+                            className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-red-600 border border-red-200 bg-white hover:bg-red-50 rounded-xl transition-all ml-auto"
+                            onClick={() => handleOpenConcludeConfirm(recordingConsultation)}
+                            title="Encerra o atendimento sem criar prontuário clínico"
+                        >
+                            <FaBan className="text-xs" /> Encerrar Sem Prontuário
+                        </button>
                         <button type="submit" disabled={isSavingRecord} className="btn-primary" style={{ margin: 0 }}>
                             {isSavingRecord ? 'Salvando...' : 'Finalizar e Assinar Prontuário'}
                         </button>
                     </div>
                 </form>
             </Modal>
+
+            {/* ---- Confirmar encerramento sem prontuário ---- */}
+            <ConfirmModal
+                isOpen={isConfirmConcludeOpen}
+                onClose={() => setIsConfirmConcludeOpen(false)}
+                onConfirm={handleConfirmConclude}
+                title="Encerrar Sem Prontuário"
+                message={`Deseja encerrar o atendimento de ${patients.find(p => String(p.id) === String(concludingConsultation?.patientId))?.name || 'este paciente'} sem criar um prontuário clínico? Esta ação não poderá ser desfeita.`}
+                confirmText="Sim, Encerrar"
+                cancelText="Voltar"
+                type="danger"
+            />
         </div>
     );
 };
