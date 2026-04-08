@@ -320,7 +320,7 @@ const AtendimentosPage = () => {
                                                     </button>
                                                 ) : (
                                                     <button onClick={handleStopRecording}
-                                                        className="flex items-center gap-2 px-3 py-2 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl text-sm transition-all animate-pulse shadow-sm shadow-red-200"
+                                                        className="flex items-center gap-2 px-3 py-2 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl text-sm transition-all shadow-sm shadow-red-200"
                                                         title="Parar gravação e transcrever"
                                                     >
                                                         <FaStop className="text-xs" /> Parar Gravação
