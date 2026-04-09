@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from '../api/axiosConfig';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
-import { FaMoneyBillWave, FaSearch, FaFilter, FaFileInvoiceDollar, FaCheckCircle, FaRegClock, FaTimesCircle, FaChevronDown, FaEdit, FaTrash, FaPlus, FaChartLine, FaRobot, FaExclamationCircle } from 'react-icons/fa';
+import { FaMoneyBillWave, FaSearch, FaFilter, FaFileInvoiceDollar, FaCheckCircle, FaRegClock, FaTimesCircle, FaChevronDown, FaEdit, FaTrash, FaPlus, FaChartLine, FaRobot, FaExclamationCircle, FaPrint } from 'react-icons/fa';
 import Pagination from '../components/Pagination';
 import toast from 'react-hot-toast';
 import Select from 'react-select';
@@ -58,13 +58,13 @@ const FinancialPage = () => {
     // 3. Efeitos de Montagem e Busca de Dados
     // ----------------------------------------------------------------------
     useEffect(() => {
-        fetchData();
+        fetchDependencies();
         getCompanyInfo()
             .then(res => setCompanyPlan(res.data?.plan || 'free'))
             .catch(() => setCompanyPlan('free'));
     }, []);
 
-    const fetchData = async () => {
+    const fetchDependencies = async () => {
         try {
             const [appRes, patRes] = await Promise.all([
                 axios.get('/appointments?limit=5000'),
@@ -72,13 +72,29 @@ const FinancialPage = () => {
             ]);
             setAppointments(appRes.data.data || appRes.data || []);
             setPatients(patRes.data.data || patRes.data || []);
-
-            const billingRes = await axios.get('/billing');
-            setPayments(billingRes.data || []);
         } catch (error) {
-            console.error('Error fetching financial data', error);
+            console.error('Error fetching financial dependencies', error);
         }
     };
+
+    const fetchBilling = async (search = searchTerm) => {
+        try {
+            const billingRes = await axios.get('/billing', {
+                params: { search: search || undefined }
+            });
+            // Opcionalmente podemos tratar res.data.data tb, mas o retorno original era apenas res.data
+            setPayments(billingRes.data?.data || billingRes.data || []);
+        } catch (error) {
+            console.error('Error fetching billing', error);
+        }
+    };
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            fetchBilling(searchTerm);
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
 
     // ----------------------------------------------------------------------
     // Lógica de Filtros Unificadas (incluindo Status, Busca e Datas)
@@ -88,30 +104,8 @@ const FinancialPage = () => {
             // Filtro por Status
             const matchesStatus = statusFilter ? (p.status || '').toLowerCase() === statusFilter.toLowerCase() : true;
 
-            // Filtro por Text/Search
-            const sQuery = searchTerm.toLowerCase();
-            let matchesSearch = true;
-            if (sQuery) {
-                let patientName = "";
-                const apptId = p.appointmentId || p.appointment_id;
-                const patIdFallback = p.patientId || p.patient_id;
-                
-                const linkedAppt = appointments.find(a => String(a.id) === String(apptId));
-                if (linkedAppt) {
-                    const patId = linkedAppt.patient_id || linkedAppt.user_id;
-                    const pat = patients.find(pat => String(pat.id) === String(patId));
-                    if (pat) patientName = pat.name;
-                } else if (patIdFallback) {
-                    const pat = patients.find(pat => String(pat.id) === String(patIdFallback));
-                    if (pat) patientName = pat.name;
-                }
-
-                matchesSearch =
-                    String(apptId).includes(sQuery) ||
-                    String(p.id).includes(sQuery) ||
-                    (p.paymentMethod && p.paymentMethod.toLowerCase().includes(sQuery)) ||
-                    patientName.toLowerCase().includes(sQuery);
-            }
+            // Filtro por Text/Search (Desativado localmente, a mágica do JOIN no Backend já nos entrega resultados enxutos)
+            const matchesSearch = true;
 
             // Filtro por Datas
             let matchesDate = true;
@@ -259,6 +253,78 @@ const FinancialPage = () => {
     // ----------------------------------------------------------------------
     // 5. Manipuladores de Ação (Abertura de Modais, Deletes)
     // ----------------------------------------------------------------------
+    const handlePrintReceipt = (payment, patientName) => {
+        const formattedValue = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: settings.currency || 'BRL' }).format(payment.value || 0);
+        const currentDate = new Date().toLocaleDateString('pt-BR');
+        let doctorName = settings.clinicName || 'Nossa Clínica';
+        
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            toast.error("Seu navegador bloqueou a abertura do recibo. Permita os pop-ups para este site.");
+            return;
+        }
+
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Recibo de Pagamento - ${patientName}</title>
+                <style>
+                    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+                    body { font-family: 'Inter', sans-serif; padding: 40px; color: #1e293b; max-width: 800px; margin: 0 auto; }
+                    .header { text-align: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 20px; margin-bottom: 40px; }
+                    .title { font-size: 28px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: #0f172a; }
+                    .clinic-name { font-size: 18px; margin-top: 10px; font-weight: 600; color: #6366f1; text-transform: uppercase; }
+                    .content { font-size: 16px; line-height: 1.8; text-align: justify; }
+                    .value-box { background: #f8fafc; border: 2px dashed #cbd5e1; padding: 25px; border-radius: 12px; font-size: 28px; font-weight: bold; text-align: center; margin: 40px 0; color: #10b981; }
+                    .footer { margin-top: 100px; text-align: center; }
+                    .signature-line { width: 400px; border-top: 1px solid #1e293b; margin: 0 auto; margin-bottom: 10px; }
+                    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; padding: 25px; background: #f8fafc; border-radius: 12px; font-size: 14px; border: 1px solid #e2e8f0; }
+                    .info-item span { display: block; color: #64748b; font-size: 12px; text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }
+                    .info-item strong { color: #0f172a; font-size: 15px; }
+                    @media print {
+                        body { padding: 0; }
+                        .value-box { -webkit-print-color-adjust: exact; background: #f8fafc !important; color: #10b981 !important; }
+                        .info-grid { -webkit-print-color-adjust: exact; background: #f8fafc !important; }
+                    }
+                </style>
+            </head>
+            <body onload="setTimeout(function(){ window.print(); }, 500);">
+                <div class="header">
+                    <div class="title">RECIBO</div>
+                    <div class="clinic-name">${doctorName}</div>
+                </div>
+                
+                <div class="info-grid">
+                    <div class="info-item"><span>Recebido de:</span><strong>${patientName}</strong></div>
+                    <div class="info-item"><span>Data de Emissão:</span><strong>${currentDate}</strong></div>
+                    <div class="info-item"><span>Referência:</span><strong>Fatura #${payment.appointmentId || payment.appointment_id || payment.id}</strong></div>
+                    <div class="info-item"><span>Método Pagamento:</span><strong>${payment.paymentMethod || payment.payment_method || 'A combinar'}</strong></div>
+                </div>
+
+                <div class="content">
+                    Recebemos de <strong>${patientName}</strong> a importância líquida de <strong>${formattedValue}</strong>, 
+                    referente à quitação de honorários e serviços prestados no registro integrado à nossa clínica. 
+                </div>
+
+                <div class="value-box">
+                    ${formattedValue}
+                </div>
+
+                <div class="content" style="text-align: center; font-size: 14px; color: #64748b;">
+                    Para maior clareza, firmamos o presente documento com a certeza de prestação de contas.
+                </div>
+
+                <div class="footer">
+                    <div class="signature-line"></div>
+                    <div style="font-weight: 600; font-size: 16px; color: #0f172a;">Assinatura do Profissional / Responsável</div>
+                    <div style="font-size: 14px; color: #64748b; margin-top: 5px;">${doctorName}</div>
+                </div>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+    };
+
     const handleOpenCreate = () => {
         setEditingId(null);
         setFormData({ appointmentId: '', patientId: '', value: '', status: 'Pendente', dueDate: new Date().toISOString().split('T')[0], paymentMethod: '' });
@@ -290,7 +356,7 @@ const FinancialPage = () => {
                 try {
                     await axios.delete(`/billing/${id}`);
                     setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-                    fetchData();
+                    fetchBilling(searchTerm);
                 } catch (error) {
                     toast.error('Erro ao excluir registro. Tente novamente.');
                 }
@@ -332,7 +398,7 @@ const FinancialPage = () => {
 
                     setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                     setIsModalOpen(false);
-                    fetchData();
+                    fetchBilling(searchTerm);
                 } catch (error) {
                     toast.error('Erro ao processar faturamento: ' + (error.response?.data?.message || 'Erro Interno'));
                 }
@@ -637,7 +703,10 @@ const FinancialPage = () => {
                                             </td>
                                             <td className="p-4">
                                                 <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button className="p-2 text-slate-400 hover:text-primary hover:bg-primary-light rounded transition-colors" title="Editar / Baixar Recibo" onClick={() => handleOpenEdit(payment)}>
+                                                    <button className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors" title="Imprimir Recibo PDF" onClick={() => handlePrintReceipt(payment, patientName)}>
+                                                        <FaPrint />
+                                                    </button>
+                                                    <button className="p-2 text-slate-400 hover:text-primary hover:bg-primary-light rounded transition-colors" title="Editar Fatura" onClick={() => handleOpenEdit(payment)}>
                                                         <FaEdit />
                                                     </button>
                                                     <button className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="Excluir Fatura" onClick={() => handleDelete(payment.id)}>

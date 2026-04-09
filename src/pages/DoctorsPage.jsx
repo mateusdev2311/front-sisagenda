@@ -25,6 +25,7 @@ const DoctorsPage = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [companyPlan, setCompanyPlan] = useState('free');
+    const [totalPages, setTotalPages] = useState(1);
     const ITEMS_PER_PAGE = 6;
 
     // Schedule Management State
@@ -39,22 +40,35 @@ const DoctorsPage = () => {
      * Dispara fetchDoctors() uma única vez quando o componente é montado na tela.
      */
     useEffect(() => {
-        fetchDoctors();
+        fetchDoctors(currentPage, searchTerm);
         axios.get('/company/me').then(res => setCompanyPlan(res.data?.plan || 'free')).catch(() => setCompanyPlan('free'));
-    }, []);
+    }, [currentPage]);
 
-    /**
-     * API: GET /doctors
-     * Recupera a lista principal de todos os profissionais médicos.
-     * Array de Resposta Esperado: [{ id, name, specialty, crm, color, created_at, ... }]
-     */
-    const fetchDoctors = async () => {
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (currentPage !== 1) setCurrentPage(1);
+            else fetchDoctors(1, searchTerm);
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
+
+    const fetchDoctors = async (page = currentPage, search = searchTerm) => {
         try {
-            const res = await axios.get('/doctors');
-            setDoctors(res.data);
+            const res = await axios.get('/doctors', {
+                params: { page, limit: ITEMS_PER_PAGE, search: search || undefined }
+            });
+            if (res.data && res.data.data) {
+                setDoctors(res.data.data);
+                setTotalPages(res.data.pages || 1);
+            } else if (Array.isArray(res.data)) {
+                setDoctors(res.data);
+                setTotalPages(Math.ceil(res.data.length / ITEMS_PER_PAGE));
+            } else {
+                setDoctors([]);
+            }
         } catch (error) {
             console.error('Fetch doctors error:', error);
-            toast.error('Erro ao carregar lista de médicos. Tente recarregar a página.');
+            toast.error('Erro ao carregar lista de médicos.');
         }
     };
 
@@ -261,23 +275,10 @@ const DoctorsPage = () => {
         });
     };
 
-    const filteredDoctors = doctors.filter(d =>
-        d.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        d.specialty.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        d.crm.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    // Pagination Logic
-    const totalPages = Math.ceil(filteredDoctors.length / ITEMS_PER_PAGE);
-    const paginatedDoctors = filteredDoctors.slice(
-        (currentPage - 1) * ITEMS_PER_PAGE,
-        currentPage * ITEMS_PER_PAGE
-    );
-
-    // Reset to page 1 when search term changes
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [searchTerm]);
+    // Exibição suporta tanto backend paginado como fallback em memória
+    const listToRender = (doctors.length > ITEMS_PER_PAGE) 
+        ? doctors.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+        : doctors;
 
     return (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 fade-in">
@@ -322,7 +323,7 @@ const DoctorsPage = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {paginatedDoctors.map((d) => (
+                            {listToRender.map((d) => (
                                 <tr key={d.id} className="hover:bg-slate-50/50 transition-colors group">
                                     <td className="px-6 py-4 relative">
                                         <div className="absolute inset-y-0 left-0 w-1 rounded-r-md" style={{ backgroundColor: d.color }}></div>
@@ -362,7 +363,7 @@ const DoctorsPage = () => {
                                     </td>
                                 </tr>
                             ))}
-                            {filteredDoctors.length === 0 && (
+                            {doctors.length === 0 && (
                                 <tr>
                                     <td colSpan="5" className="px-6 py-12 text-center text-slate-500">
                                         <div className="flex flex-col items-center justify-center">

@@ -24,24 +24,35 @@ const UsersPage = () => {
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', type: 'primary', onConfirm: null });
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
     const ITEMS_PER_PAGE = 6;
 
-    /**
-     * Busca as contas de usuário do sistema assim que a tela carrega.
-     */
     useEffect(() => {
-        fetchUsers();
-    }, []);
+        fetchUsers(currentPage, searchTerm);
+    }, [currentPage]);
 
-    /**
-     * API: GET /users
-     * Recupera todos os Usuários do Sistema para preencher a tabela de gerenciamento.
-     * Array de Resposta Esperado: [{ id, name, email, role, created_at, ... }]
-     */
-    const fetchUsers = async () => {
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (currentPage !== 1) setCurrentPage(1);
+            else fetchUsers(1, searchTerm);
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
+
+    const fetchUsers = async (page = currentPage, search = searchTerm) => {
         try {
-            const res = await axios.get('/users');
-            setUsers(res.data);
+            const res = await axios.get('/users', {
+                params: { page, limit: ITEMS_PER_PAGE, search: search || undefined }
+            });
+            if (res.data && res.data.data) {
+                setUsers(res.data.data);
+                setTotalPages(res.data.pages || 1);
+            } else if (Array.isArray(res.data)) {
+                setUsers(res.data);
+                setTotalPages(Math.ceil(res.data.length / ITEMS_PER_PAGE));
+            } else {
+                setUsers([]);
+            }
         } catch (error) {
             console.error('Failed to fetch users', error);
             toast.error('Erro ao carregar usuários. Tente recarregar a página.');
@@ -146,22 +157,10 @@ const UsersPage = () => {
         });
     };
 
-    const filteredUsers = users.filter(u =>
-        u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.email.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    // Pagination Logic
-    const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
-    const paginatedUsers = filteredUsers.slice(
-        (currentPage - 1) * ITEMS_PER_PAGE,
-        currentPage * ITEMS_PER_PAGE
-    );
-
-    // Reset to page 1 when search term changes
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [searchTerm]);
+    // Exibição suporta tanto backend paginado como fallback em memória
+    const listToRender = (users.length > ITEMS_PER_PAGE)
+        ? users.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+        : users;
 
     return (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 fade-in">
@@ -200,7 +199,7 @@ const UsersPage = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {paginatedUsers.map((u) => (
+                            {listToRender.map((u) => (
                                 <tr key={u.id} className="hover:bg-slate-50/50 transition-colors group">
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center gap-3">
@@ -229,7 +228,7 @@ const UsersPage = () => {
                                     </td>
                                 </tr>
                             ))}
-                            {filteredUsers.length === 0 && (
+                            {users.length === 0 && (
                                 <tr>
                                     <td colSpan="4" className="px-6 py-12 text-center text-slate-500">
                                         <div className="flex flex-col items-center justify-center">
