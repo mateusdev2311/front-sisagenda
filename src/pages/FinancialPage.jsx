@@ -491,7 +491,7 @@ const FinancialPage = () => {
                         disabled={isAnalyzing}
                     >
                         <FaRobot className={isAnalyzing ? "animate-spin" : ""} />
-                        {isAnalyzing ? "Analisando..." : "Consultor IA ✨"}
+                        {isAnalyzing ? "Analisando..." : "Consultor IA"}
                     </button>
                     <button className="btn-primary flex items-center gap-2" onClick={handleOpenCreate}>
                         <FaPlus /> Nova Fatura
@@ -501,21 +501,36 @@ const FinancialPage = () => {
 
             {/* AI Insights Card */}
             {aiInsights && (
-                <div className="bg-gradient-to-br from-indigo-900 to-purple-900 rounded-2xl p-6 shadow-xl mb-2 text-white relative overflow-hidden animate-in zoom-in-95 duration-300 flex-shrink-0">
-                    <div className="absolute -right-8 -top-8 opacity-10">
-                        <FaRobot className="text-9xl" />
+                <div className="bg-white border border-slate-200 border-l-4 border-l-primary rounded-2xl p-6 shadow-sm mb-4 relative overflow-hidden animate-in slide-in-from-top-4 duration-300 flex-shrink-0">
+                    <div className="absolute -right-8 -top-8 opacity-[0.03]">
+                        <FaRobot className="text-9xl text-primary" />
                     </div>
                     <div className="relative z-10">
-                        <div className="flex justify-between items-start mb-4">
-                            <h3 className="text-lg font-bold flex items-center gap-2 text-purple-200">
-                                <FaRobot /> Resultados da Análise (CFO Virtual)
+                        <div className="flex justify-between items-start mb-4 border-b border-slate-100 pb-4">
+                            <h3 className="text-lg font-bold flex items-center gap-3 text-slate-800">
+                                <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                                    <FaRobot />
+                                </div>
+                                Análise do Consultor IA
                             </h3>
-                            <button onClick={() => setAiInsights(null)} className="text-purple-300 hover:text-white p-1 bg-white/10 rounded-lg">✕</button>
+                            <button onClick={() => setAiInsights(null)} className="text-slate-400 hover:text-red-500 p-2 hover:bg-red-50 rounded-lg transition-colors">✕</button>
                         </div>
-                        <div className="prose prose-invert prose-sm max-w-none text-slate-200 space-y-2">
+                        <div className="prose prose-sm max-w-none text-slate-600 leading-relaxed font-medium">
                             {typeof aiInsights === 'string' 
-                                ? aiInsights.split('\n').filter(l => l.trim() !== '').map((line, i) => <p key={i}>{line}</p>)
-                                : <pre className="bg-black/30 p-4 rounded-lg overflow-auto">{JSON.stringify(aiInsights, null, 2)}</pre>
+                                ? aiInsights.split('\n').filter(l => l.trim() !== '').map((line, i) => {
+                                    // Transforma elementos em negrito Markdown em strong tags do React
+                                    const parts = line.split(/(\*\*.*?\*\*)/g);
+                                    return (
+                                        <p key={i} className="mb-3 last:mb-0">
+                                            {parts.map((p, idx) => 
+                                                p.startsWith('**') && p.endsWith('**') 
+                                                    ? <strong key={idx} className="text-slate-800 font-bold">{p.slice(2, -2)}</strong> 
+                                                    : p
+                                            )}
+                                        </p>
+                                    );
+                                })
+                                : <pre className="bg-slate-50 p-4 border border-slate-100 rounded-lg overflow-auto text-sm text-slate-700">{JSON.stringify(aiInsights, null, 2)}</pre>
                             }
                         </div>
                     </div>

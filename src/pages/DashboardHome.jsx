@@ -22,10 +22,10 @@ const toLocalYYYYMMDD = (date) => {
 
 const fetchAll = () => Promise.all([
     axios.get('/appointments?limit=5000').then(r => r.data.data || r.data || []),
-    axios.get('/doctors').then(r => r.data || []),
+    axios.get('/doctors').then(r => r.data.data || r.data || []),
     axios.get('/patients?limit=5000').then(r => r.data.data || r.data || []),
-    axios.get('/billing').then(r => r.data || []),
-    axios.get('/records').then(r => Array.isArray(r.data) ? r.data : []),
+    axios.get('/billing').then(r => r.data.data || r.data || []),
+    axios.get('/records').then(r => r.data?.data || (Array.isArray(r.data) ? r.data : [])),
     axios.get('/company/me').then(r => r.data?.plan || 'free').catch(() => 'free'),
 ]);
 
@@ -53,13 +53,15 @@ const DashboardHome = () => {
     });
 
     const dayRecords = allRecords.filter(rec => {
-        if (!rec.created_at) return false;
-        return String(rec.created_at).startsWith(selectedDate);
+        const d = rec.created_at || rec.createdAt;
+        if (!d) return false;
+        return String(d).startsWith(selectedDate);
     });
 
     const dayBillings = allBillings.filter(b => {
-        if (!b.created_at) return false;
-        return String(b.created_at).startsWith(selectedDate);
+        const d = b.dueDate || b.due_date || b.created_at || b.createdAt;
+        if (!d) return false;
+        return String(d).startsWith(selectedDate);
     });
 
     let dayRevenue = 0, dayPending = 0;
