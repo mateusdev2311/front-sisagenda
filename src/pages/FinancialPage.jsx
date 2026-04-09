@@ -2,17 +2,17 @@ import { useState, useEffect } from 'react';
 import axios from '../api/axiosConfig';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
-import { FaMoneyBillWave, FaSearch, FaFilter, FaFileInvoiceDollar, FaCheckCircle, FaRegClock, FaTimesCircle, FaChevronDown, FaEdit, FaTrash, FaPlus, FaChartLine } from 'react-icons/fa';
+import { FaMoneyBillWave, FaSearch, FaFilter, FaFileInvoiceDollar, FaCheckCircle, FaRegClock, FaTimesCircle, FaChevronDown, FaEdit, FaTrash, FaPlus, FaChartLine, FaRobot, FaExclamationCircle } from 'react-icons/fa';
 import Pagination from '../components/Pagination';
 import toast from 'react-hot-toast';
 import Select from 'react-select';
 import { useSettings } from '../context/SettingsContext';
-import { getCompanyInfo } from '../services/aiService';
+import { getCompanyInfo, getFinancialInsights } from '../services/aiService';
 import { FaWhatsapp } from 'react-icons/fa';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
-import { Doughnut, Bar } from 'react-chartjs-2';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title, LineElement, PointElement, Filler } from 'chart.js';
+import { Doughnut, Bar, Line } from 'react-chartjs-2';
 
-ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
+ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title, LineElement, PointElement, Filler);
 
 const FinancialPage = () => {
     const { settings } = useSettings();
@@ -28,17 +28,30 @@ const FinancialPage = () => {
     // ----------------------------------------------------------------------
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
+
+    // Filtros de Data
+    const [dateStart, setDateStart] = useState(() => {
+        const d = new Date();
+        return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+    });
+    const [dateEnd, setDateEnd] = useState('');
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState(null);
-    const [formData, setFormData] = useState({ appointmentId: '', patientId: '', value: '', status: 'Pendente', dueDate: '', payment_method: '' });
+    const [formData, setFormData] = useState({ appointmentId: '', patientId: '', value: '', status: 'Pendente', dueDate: '', paymentMethod: '' });
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', type: 'primary', onConfirm: null });
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 6;
+
+    // AI Financial Assistant State
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [aiInsights, setAiInsights] = useState(null);
 
     // Key Performance Indicators (KPIs)
     const [stats, setStats] = useState({ totalRevenue: 0, pendingAmount: 0, paidCount: 0 });
     const [revenueChartData, setRevenueChartData] = useState(null);
     const [methodChartData, setMethodChartData] = useState(null);
+    const [monthlyEvolData, setMonthlyEvolData] = useState(null);
     const [companyPlan, setCompanyPlan] = useState(null); // null = loading
 
     // ----------------------------------------------------------------------
@@ -51,14 +64,8 @@ const FinancialPage = () => {
             .catch(() => setCompanyPlan('free'));
     }, []);
 
-    // Atualiza os KPIs sempre que os pagamentos mudam
-    useEffect(() => {
-        calculateStats(payments);
-    }, [payments]);
-
     const fetchData = async () => {
         try {
-            // Buscar pacientes e agendamentos para referência visual
             const [appRes, patRes] = await Promise.all([
                 axios.get('/appointments?limit=5000'),
                 axios.get('/patients?limit=5000')
@@ -66,14 +73,66 @@ const FinancialPage = () => {
             setAppointments(appRes.data.data || appRes.data || []);
             setPatients(patRes.data.data || patRes.data || []);
 
-            // Buscar dados reais da API de faturamento
             const billingRes = await axios.get('/billing');
             setPayments(billingRes.data || []);
-
         } catch (error) {
             console.error('Error fetching financial data', error);
         }
     };
+
+    // ----------------------------------------------------------------------
+    // Lógica de Filtros Unificadas (incluindo Status, Busca e Datas)
+    // ----------------------------------------------------------------------
+    const getFilteredPayments = () => {
+        return payments.filter(p => {
+            // Filtro por Status
+            const matchesStatus = statusFilter ? (p.status || '').toLowerCase() === statusFilter.toLowerCase() : true;
+
+            // Filtro por Text/Search
+            const sQuery = searchTerm.toLowerCase();
+            let matchesSearch = true;
+            if (sQuery) {
+                let patientName = "";
+                const apptId = p.appointmentId || p.appointment_id;
+                const patIdFallback = p.patientId || p.patient_id;
+                
+                const linkedAppt = appointments.find(a => String(a.id) === String(apptId));
+                if (linkedAppt) {
+                    const patId = linkedAppt.patient_id || linkedAppt.user_id;
+                    const pat = patients.find(pat => String(pat.id) === String(patId));
+                    if (pat) patientName = pat.name;
+                } else if (patIdFallback) {
+                    const pat = patients.find(pat => String(pat.id) === String(patIdFallback));
+                    if (pat) patientName = pat.name;
+                }
+
+                matchesSearch =
+                    String(apptId).includes(sQuery) ||
+                    String(p.id).includes(sQuery) ||
+                    (p.paymentMethod && p.paymentMethod.toLowerCase().includes(sQuery)) ||
+                    patientName.toLowerCase().includes(sQuery);
+            }
+
+            // Filtro por Datas
+            let matchesDate = true;
+            const pDateStr = p.dueDate || p.due_date;
+            if (pDateStr && !isNaN(new Date(pDateStr).getTime())) {
+                // Remove timezones for accurate date comparison
+                const pDate = new Date(pDateStr).setHours(0,0,0,0);
+                if (dateStart && pDate < new Date(dateStart).setHours(0,0,0,0)) matchesDate = false;
+                if (dateEnd && pDate > new Date(dateEnd).setHours(0,0,0,0)) matchesDate = false;
+            }
+
+            return matchesStatus && matchesSearch && matchesDate;
+        });
+    };
+
+    const filteredPayments = getFilteredPayments();
+
+    // Atualiza KPIs com base APENAS nos dados filtrados na tela
+    useEffect(() => {
+        calculateStats(filteredPayments);
+    }, [payments, statusFilter, searchTerm, dateStart, dateEnd, appointments, patients]);
 
     const calculateStats = (data) => {
         let total = 0;
@@ -81,12 +140,26 @@ const FinancialPage = () => {
         let paid = 0;
 
         const methodsCount = {};
+        const monthlyRev = {};
 
         data.forEach(p => {
             const val = parseFloat(p.value) || 0;
+            const pDateStr = p.dueDate || p.due_date;
+            
             if (p.status === 'Pago') {
                 total += val;
                 paid++;
+                
+                // Agrupamento para gráfico de Evolução Mensal
+                if (pDateStr) {
+                    const dDate = new Date(pDateStr);
+                    if (!isNaN(dDate.getTime())) {
+                        const yyyy = dDate.getFullYear();
+                        const mm = String(dDate.getMonth() + 1).padStart(2, '0');
+                        const monthKey = `${yyyy}-${mm}`;
+                        monthlyRev[monthKey] = (monthlyRev[monthKey] || 0) + val;
+                    }
+                }
             } else if (p.status === 'Pendente') {
                 pending += val;
             }
@@ -120,10 +193,71 @@ const FinancialPage = () => {
                 barPercentage: 0.6
             }]
         });
+
+        const sortedMonths = Object.keys(monthlyRev).sort();
+        setMonthlyEvolData({
+            labels: sortedMonths.length ? sortedMonths.map(m => {
+                const [y, mm] = m.split('-');
+                return `${mm}/${y}`;
+            }) : ['Mês Atual'],
+            datasets: [{
+                label: 'Receita Registrada (R$)',
+                data: sortedMonths.length ? sortedMonths.map(m => monthlyRev[m]) : [0],
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        });
     };
 
     // ----------------------------------------------------------------------
-    // 4. Manipuladores de Ação (Abertura de Modais, Deletes)
+    // 4. Manipuladores de IA e IA Assistant
+    // ----------------------------------------------------------------------
+    const handleAnalyzeFinance = async () => {
+        setIsAnalyzing(true);
+        try {
+            // Aggregate methods for AI
+            const methods = methodChartData?.labels?.reduce((acc, label, idx) => {
+                acc[label] = methodChartData.datasets[0].data[idx];
+                return acc;
+            }, {});
+
+            // Filter Overdue (Vencidos)
+            const overdue = filteredPayments.filter(p => p.status === 'Pendente' && p.dueDate && new Date(p.dueDate).setHours(0,0,0,0) < new Date().setHours(0,0,0,0));
+            const overdueSum = overdue.reduce((acc, p) => acc + (parseFloat(p.value) || 0), 0);
+
+            const summaryData = {
+                totalRevenue: stats.totalRevenue,
+                pendingAmount: stats.pendingAmount,
+                overdueAmount: overdueSum,
+                paidCount: stats.paidCount,
+                overdueCount: overdue.length,
+                methods: methods,
+                periodFrom: dateStart,
+                periodTo: dateEnd
+            };
+
+            const response = await getFinancialInsights(summaryData);
+            
+            let result = response.data?.insights || response.data?.insight || response.data?.message;
+            if (!result) {
+                result = typeof response.data === 'object' ? JSON.stringify(response.data, null, 2) : String(response.data);
+            }
+            
+            setAiInsights(result || "Nenhuma resposta gerada pelo backend.");
+        } catch (error) {
+            console.error("Erro do CFO:", error);
+            const errStr = error.response?.data?.error || error.response?.data?.message || error.message || "Erro desconhecido";
+            toast.error("Falha no Consultor: " + errStr);
+            setAiInsights(`⚠️ FALHA DE COMUNICAÇÃO:\n${errStr}\n\nDica de Solução:\n- O backend está rodando?\n- Olhe o console (terminal) do servidor Node.js. Certamente ele imprimiu o motivo de ter falhado.\n- O controller pode não estar registrado nas rotas.`);
+        } finally {
+            setIsAnalyzing(false);
+        }
+    };
+
+    // ----------------------------------------------------------------------
+    // 5. Manipuladores de Ação (Abertura de Modais, Deletes)
     // ----------------------------------------------------------------------
     const handleOpenCreate = () => {
         setEditingId(null);
@@ -164,9 +298,6 @@ const FinancialPage = () => {
         });
     };
 
-    // ----------------------------------------------------------------------
-    // 5. Envios de Formulário (POST/PUT API)
-    // ----------------------------------------------------------------------
     const handleSubmit = (e) => {
         e.preventDefault();
         setConfirmDialog({
@@ -176,7 +307,6 @@ const FinancialPage = () => {
             type: 'primary',
             onConfirm: async () => {
                 try {
-                    // Descobrir PatientID baseando-se no Appointment
                     const selectedApp = appointments.find(a => String(a.id) === String(formData.appointmentId));
                     let derivedPatientId = formData.patientId || (selectedApp ? (selectedApp.patient_id || selectedApp.user_id) : null);
 
@@ -213,39 +343,29 @@ const FinancialPage = () => {
     // ----------------------------------------------------------------------
     // 6. Helpers de UI (Mapeamento Visual para Cores e Badges)
     // ----------------------------------------------------------------------
-    const getStatusBadge = (status) => {
+    const getStatusBadge = (status, dueDate) => {
         const s = (status || '').toLowerCase();
         if (s === 'pago') return <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200"><FaCheckCircle className="text-sm" /> Pago</span>;
-        if (s === 'pendente') return <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 border border-amber-200"><FaRegClock className="text-sm" /> Pendente</span>;
-        if (s === 'cancelado') return <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200"><FaTimesCircle className="text-sm" /> Cancelado</span>;
+        if (s === 'pendente') {
+            const isOverdue = dueDate && new Date(dueDate).setHours(0,0,0,0) < new Date().setHours(0,0,0,0);
+            if (isOverdue) return <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200"><FaExclamationCircle className="text-sm" /> Vencida</span>;
+            return <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 border border-amber-200"><FaRegClock className="text-sm" /> Pendente</span>;
+        }
+        if (s === 'cancelado') return <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200"><FaTimesCircle className="text-sm" /> Cancelado</span>;
         return <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">Desconhecido</span>;
     };
 
-    const filteredPayments = payments.filter(p => {
-        const matchesStatus = statusFilter ? (p.status || '').toLowerCase() === statusFilter.toLowerCase() : true;
-
-        // Basic search filtering (by ID, appointment ID or method)
-        const sQuery = searchTerm.toLowerCase();
-        const matchesSearch = sQuery ?
-            String(p.appointmentId || p.appointment_id).includes(sQuery) ||
-            String(p.id).includes(sQuery) ||
-            (p.paymentMethod && p.paymentMethod.toLowerCase().includes(sQuery))
-            : true;
-
-        return matchesStatus && matchesSearch;
-    });
-
     // Pagination Logic
-    const totalPages = Math.ceil(filteredPayments.length / ITEMS_PER_PAGE);
+    const totalPages = Math.ceil(filteredPayments.length / ITEMS_PER_PAGE) || 1;
     const paginatedPayments = filteredPayments.slice(
         (currentPage - 1) * ITEMS_PER_PAGE,
         currentPage * ITEMS_PER_PAGE
     );
 
-    // Reset to page 1 when search term changes
+    // Reset to page 1 when filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, statusFilter]);
+    }, [searchTerm, statusFilter, dateStart, dateEnd]);
 
     // ── Paywall para plano Free ──────────────────────────────────────────────
     if (companyPlan === 'free') {
@@ -255,9 +375,9 @@ const FinancialPage = () => {
                     <FaMoneyBillWave className="text-amber-400 text-4xl" />
                 </div>
                 <div className="text-center max-w-md">
-                    <h2 className="text-2xl font-bold text-slate-800 mb-2">Gestão Financeira</h2>
+                    <h2 className="text-2xl font-bold text-slate-800 mb-2">Gestão Financeira com IA</h2>
                     <p className="text-slate-500 leading-relaxed">
-                        O módulo financeiro, com emissão de faturas, gráficos de receita e controle de inadimplência,
+                        O módulo financeiro completo, com CFO Virtual, gráficos evolutivos e controle de inadimplência,
                         está disponível a partir do
                         <span className="font-bold text-emerald-600"> plano Start</span>.
                     </p>
@@ -265,7 +385,7 @@ const FinancialPage = () => {
                 <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm max-w-sm w-full space-y-3">
                     <p className="text-sm font-bold text-slate-700 text-center">O que você terá acesso:</p>
                     <ul className="space-y-2 text-sm text-slate-600">
-                        {['Emissão de faturas por consulta', 'Dashboard de receita e inadimplência', 'Gráficos de métodos de pagamento', 'Controle de status (Pago / Pendente / Cancelado)'].map(f => (
+                        {['Consultor IA automático', 'Emissão de faturas por consulta', 'Gráficos de evolução mensal', 'Painel de Inadimplência inteligente'].map(f => (
                             <li key={f} className="flex items-center gap-2">
                                 <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0">✓</span>
                                 {f}
@@ -296,12 +416,45 @@ const FinancialPage = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
                 <div>
                     <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Gestão Financeira</h2>
-                    <p className="text-sm text-slate-500 mt-1">Acompanhe receitas, pagamentos pendentes e emissão de recibos.</p>
+                    <p className="text-sm text-slate-500 mt-1">Acompanhe receitas do período, pagamentos vencidos e receba dicas do Consutor IA.</p>
                 </div>
-                <button className="btn-primary" onClick={handleOpenCreate}>
-                    <FaPlus /> Nova Fatura
-                </button>
+                <div className="flex flex-wrap items-center gap-3">
+                    <button 
+                        className="btn-secondary flex items-center gap-2 bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200 text-purple-700 hover:bg-purple-100 transition-colors shadow-sm" 
+                        onClick={handleAnalyzeFinance} 
+                        disabled={isAnalyzing}
+                    >
+                        <FaRobot className={isAnalyzing ? "animate-spin" : ""} />
+                        {isAnalyzing ? "Analisando..." : "Consultor IA ✨"}
+                    </button>
+                    <button className="btn-primary flex items-center gap-2" onClick={handleOpenCreate}>
+                        <FaPlus /> Nova Fatura
+                    </button>
+                </div>
             </div>
+
+            {/* AI Insights Card */}
+            {aiInsights && (
+                <div className="bg-gradient-to-br from-indigo-900 to-purple-900 rounded-2xl p-6 shadow-xl mb-2 text-white relative overflow-hidden animate-in zoom-in-95 duration-300 flex-shrink-0">
+                    <div className="absolute -right-8 -top-8 opacity-10">
+                        <FaRobot className="text-9xl" />
+                    </div>
+                    <div className="relative z-10">
+                        <div className="flex justify-between items-start mb-4">
+                            <h3 className="text-lg font-bold flex items-center gap-2 text-purple-200">
+                                <FaRobot /> Resultados da Análise (CFO Virtual)
+                            </h3>
+                            <button onClick={() => setAiInsights(null)} className="text-purple-300 hover:text-white p-1 bg-white/10 rounded-lg">✕</button>
+                        </div>
+                        <div className="prose prose-invert prose-sm max-w-none text-slate-200 space-y-2">
+                            {typeof aiInsights === 'string' 
+                                ? aiInsights.split('\n').filter(l => l.trim() !== '').map((line, i) => <p key={i}>{line}</p>)
+                                : <pre className="bg-black/30 p-4 rounded-lg overflow-auto">{JSON.stringify(aiInsights, null, 2)}</pre>
+                            }
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* KPI Cards Area */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -309,7 +462,7 @@ const FinancialPage = () => {
                     <div className="absolute -right-6 -top-6 bg-emerald-500/5 w-24 h-24 rounded-full group-hover:bg-emerald-500/10 transition-colors"></div>
                     <div className="flex justify-between items-start mb-4">
                         <div>
-                            <p className="text-sm font-medium text-slate-500 mb-1">Receita Liquidada (Mês)</p>
+                            <p className="text-sm font-medium text-slate-500 mb-1">Receita Liquidada (No Período)</p>
                             <h3 className="text-3xl font-bold text-slate-800">
                                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: settings.currency || 'BRL' }).format(stats.totalRevenue)}
                             </h3>
@@ -339,7 +492,7 @@ const FinancialPage = () => {
                     <div className="absolute -right-6 -top-6 bg-primary/5 w-24 h-24 rounded-full group-hover:bg-primary/10 transition-colors"></div>
                     <div className="flex justify-between items-start mb-4">
                         <div>
-                            <p className="text-sm font-medium text-slate-500 mb-1">Consultas Pagas (Vol.)</p>
+                            <p className="text-sm font-medium text-slate-500 mb-1">Faturas Pagas (Vol)</p>
                             <h3 className="text-3xl font-bold text-slate-800">{stats.paidCount}</h3>
                         </div>
                         <div className="w-12 h-12 rounded-xl bg-primary-light text-primary flex items-center justify-center text-xl shadow-inner">
@@ -350,15 +503,21 @@ const FinancialPage = () => {
             </div>
 
             {/* Financial Charts Area */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-2">
-                <div className="bg-white rounded-2xl p-6 shadow-sm shadow-slate-200/50 border border-slate-100 flex flex-col h-[350px]">
-                    <h3 className="font-semibold text-slate-800 mb-4">Proporção de Faturamento</h3>
-                    <div className="flex-1 relative flex justify-center">
-                        {revenueChartData && <Doughnut data={revenueChartData} options={{ maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } } } }} />}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-2">
+                <div className="bg-white rounded-2xl p-6 shadow-sm shadow-slate-200/50 border border-slate-100 flex flex-col h-[280px]">
+                    <h3 className="font-semibold text-slate-800 mb-4 text-center">Evolução Mensal (Receita Ativa)</h3>
+                    <div className="flex-1 relative">
+                        {monthlyEvolData && <Line data={monthlyEvolData} options={{ maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } } } }} />}
                     </div>
                 </div>
-                <div className="bg-white rounded-2xl p-6 shadow-sm shadow-slate-200/50 border border-slate-100 flex flex-col h-[350px]">
-                    <h3 className="font-semibold text-slate-800 mb-4">Métodos de Pagamento</h3>
+                <div className="bg-white rounded-2xl p-6 shadow-sm shadow-slate-200/50 border border-slate-100 flex flex-col h-[280px]">
+                    <h3 className="font-semibold text-slate-800 mb-4 text-center">Proporção Fluxo de Caixa</h3>
+                    <div className="flex-1 relative flex justify-center">
+                        {revenueChartData && <Doughnut data={revenueChartData} options={{ maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 15 } } } }} />}
+                    </div>
+                </div>
+                <div className="bg-white rounded-2xl p-6 shadow-sm shadow-slate-200/50 border border-slate-100 flex flex-col h-[280px]">
+                    <h3 className="font-semibold text-slate-800 mb-4 text-center">Métodos de Pagamento</h3>
                     <div className="flex-1 relative">
                         {methodChartData && <Bar data={methodChartData} options={{ maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } }, x: { grid: { display: false } } } }} />}
                     </div>
@@ -367,36 +526,56 @@ const FinancialPage = () => {
 
             {/* List & Filtering Array */}
             <div className="bg-white rounded-2xl shadow-sm shadow-slate-200/50 border border-slate-100 flex-1 flex flex-col overflow-hidden min-h-[500px]">
-                <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row gap-4 justify-between bg-slate-50/50">
-                    <div className="relative w-full sm:max-w-xs">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                            <FaSearch className="text-sm" />
+                <div className="p-4 border-b border-slate-100 flex flex-col lg:flex-row gap-4 justify-between bg-slate-50/50">
+                    <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+                        <div className="relative w-full sm:max-w-xs">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                <FaSearch className="text-sm" />
+                            </div>
+                            <input
+                                type="text"
+                                className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none font-medium text-slate-600 bg-white"
+                                placeholder="Id consulta, paciente ou método..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
                         </div>
-                        <input
-                            type="text"
-                            className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none font-medium text-slate-600 bg-white"
-                            placeholder="Buscar forma de pagamento..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
+                        <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                <FaFilter className="text-sm" />
+                            </div>
+                            <select
+                                className="block w-full sm:w-44 pl-9 pr-8 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none font-medium text-slate-600 cursor-pointer"
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                            >
+                                <option value="">Todos os Status</option>
+                                <option value="pago">Apenas Pagos</option>
+                                <option value="pendente">Apenas Pendentes</option>
+                                <option value="cancelado">Cancelados</option>
+                            </select>
+                            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
+                                <FaChevronDown className="text-xs" />
+                            </div>
+                        </div>
                     </div>
-                    <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                            <FaFilter className="text-sm" />
-                        </div>
-                        <select
-                            className="block w-full sm:w-48 pl-9 pr-8 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none font-medium text-slate-600 cursor-pointer"
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                        >
-                            <option value="">Filtro: Todos os Status</option>
-                            <option value="pago">Pago</option>
-                            <option value="pendente">Pendente</option>
-                            <option value="cancelado">Cancelado</option>
-                        </select>
-                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
-                            <FaChevronDown className="text-xs" />
-                        </div>
+                    {/* Filtro de Datas adicionado */}
+                    <div className="flex items-center gap-2 bg-white border border-slate-200 p-1 rounded-lg">
+                        <input 
+                            type="date" 
+                            title="A partir desta data de vencimento"
+                            className="bg-transparent border-none text-sm text-slate-600 font-medium focus:ring-0 cursor-pointer p-1 outline-none"
+                            value={dateStart} 
+                            onChange={(e) => setDateStart(e.target.value)} 
+                        />
+                        <span className="text-slate-400 text-xs font-bold uppercase">Até</span>
+                        <input 
+                            type="date" 
+                            title="Até esta data de vencimento"
+                            className="bg-transparent border-none text-sm text-slate-600 font-medium focus:ring-0 cursor-pointer p-1 outline-none"
+                            value={dateEnd} 
+                            onChange={(e) => setDateEnd(e.target.value)} 
+                        />
                     </div>
                 </div>
 
@@ -419,13 +598,12 @@ const FinancialPage = () => {
                                     <td colSpan="7" className="p-8 text-center text-slate-500">
                                         <div className="flex flex-col items-center justify-center">
                                             <FaMoneyBillWave className="text-4xl text-slate-300 mb-3" />
-                                    <p className="font-medium">Nenhum registro financeiro encontrado.</p>
-                                </div>
-                            </td>
-                        </tr>
-                    ) : (
-                        paginatedPayments.map((payment) => {
-                                    // Linking patient names resolving from Appts > Users.
+                                            <p className="font-medium">Nenhum registro financeiro encontrado no período e filtro atual.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : (
+                                paginatedPayments.map((payment) => {
                                     const apptId = payment.appointmentId || payment.appointment_id;
                                     const patIdFallback = payment.patientId || payment.patient_id;
 
@@ -448,14 +626,14 @@ const FinancialPage = () => {
                                             <td className="p-4 text-slate-800 font-bold border-l-2 border-transparent group-hover:border-primary">
                                                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: settings.currency || 'BRL' }).format(payment.value || 0)}
                                             </td>
-                                            <td className="p-4 text-slate-500">
+                                            <td className="p-4 text-slate-500 font-medium">
                                                 {(payment.dueDate || payment.due_date) && !isNaN(new Date(payment.dueDate || payment.due_date).getTime()) ? new Date(payment.dueDate || payment.due_date).toLocaleDateString() : 'N/D'}
                                             </td>
                                             <td className="p-4 text-slate-600 font-medium">
                                                 {payment.paymentMethod || payment.payment_method || '-'}
                                             </td>
                                             <td className="p-4">
-                                                {getStatusBadge(payment.status)}
+                                                {getStatusBadge(payment.status, payment.dueDate || payment.due_date)}
                                             </td>
                                             <td className="p-4">
                                                 <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

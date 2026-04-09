@@ -31,3 +31,11 @@ export const transcribeAudio = (audioFile, patientName = '') => {
         timeout: 120000, // 2 minutos (transcrição pode ser lenta)
     });
 };
+
+/**
+ * Solicita uma análise inteligente da situação financeira (IA)
+ * @param {Object} summaryData - Resumo financeiro (total, pendentes, métodos, etc)
+ * @returns {Promise} com { insights: string } ou { data: string }
+ */
+export const getFinancialInsights = (summaryData) =>
+    axios.post('/ai/financial-insights', summaryData);
