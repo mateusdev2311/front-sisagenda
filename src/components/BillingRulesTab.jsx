@@ -356,9 +356,10 @@ const BillingRulesTab = () => {
             );
             toast.success('Template atualizado! ✅');
         } else {
-            const res = await createBillingRule({ trigger_days, message_template, channel: 'whatsapp' });
-            setRules((prev) => [...prev, res.data]);
-            toast.success('Nova regra criada! ✅');
+            await createBillingRule({ trigger_days, message_template, channel: 'whatsapp' });
+            // Re-fetch completo: o backend pode ter criado regras padrão adicionais (seed automático)
+            await fetchRules();
+            toast.success('Regra(s) criada(s) com sucesso! ✅');
         }
     };
 
