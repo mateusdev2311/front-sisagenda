@@ -22,6 +22,7 @@ const FinancialPage = () => {
     const [payments, setPayments] = useState([]);
     const [appointments, setAppointments] = useState([]);
     const [patients, setPatients] = useState([]);
+    const [billedAppointmentIds, setBilledAppointmentIds] = useState(new Set());
 
     // ----------------------------------------------------------------------
     // 2. Estados da Interface (UI State)
@@ -66,12 +67,17 @@ const FinancialPage = () => {
 
     const fetchDependencies = async () => {
         try {
-            const [appRes, patRes] = await Promise.all([
+            const [appRes, patRes, billRes] = await Promise.all([
                 axios.get('/appointments?limit=5000'),
-                axios.get('/patients?limit=5000')
+                axios.get('/patients?limit=5000'),
+                axios.get('/billing?limit=10000')
             ]);
             setAppointments(appRes.data.data || appRes.data || []);
             setPatients(patRes.data.data || patRes.data || []);
+            
+            const allBillings = billRes.data?.data || billRes.data || [];
+            const billedSet = new Set(allBillings.map(b => String(b.appointmentId || b.appointment_id)).filter(id => id && id !== 'undefined' && id !== 'null'));
+            setBilledAppointmentIds(billedSet);
         } catch (error) {
             console.error('Error fetching financial dependencies', error);
         }
@@ -356,6 +362,7 @@ const FinancialPage = () => {
                 try {
                     await axios.delete(`/billing/${id}`);
                     setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                    fetchDependencies();
                     fetchBilling(searchTerm);
                 } catch (error) {
                     toast.error('Erro ao excluir registro. Tente novamente.');
@@ -398,6 +405,7 @@ const FinancialPage = () => {
 
                     setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                     setIsModalOpen(false);
+                    fetchDependencies();
                     fetchBilling(searchTerm);
                 } catch (error) {
                     toast.error('Erro ao processar faturamento: ' + (error.response?.data?.message || 'Erro Interno'));
@@ -753,17 +761,20 @@ const FinancialPage = () => {
                     <div>
                         <label className="text-sm font-bold text-slate-700 block mb-1">Referência (Consulta e Paciente)</label>
                         <Select
-                            options={appointments.map(app => {
-                                const patId = app.patient_id || app.user_id;
-                                const pat = patients.find(p => String(p.id) === String(patId));
-                                const patName = pat ? pat.name : 'Desconhecido';
-                                const dateStr = new Date(app.date).toLocaleDateString();
-                                return {
-                                    value: app.id,
-                                    label: `Consulta #${app.id} - ${patName} (${dateStr})`,
-                                    patientId: patId // Keep patientId for quick access
-                                };
-                            })}
+                            options={appointments
+                                .filter(app => !billedAppointmentIds.has(String(app.id)) || String(app.id) === String(formData.appointmentId))
+                                .map(app => {
+                                    const patId = app.patient_id || app.user_id;
+                                    const pat = patients.find(p => String(p.id) === String(patId));
+                                    const patName = pat ? pat.name : 'Desconhecido';
+                                    const dateStr = new Date(app.date).toLocaleDateString();
+                                    return {
+                                        value: app.id,
+                                        label: `Consulta #${app.id} - ${patName} (${dateStr})`,
+                                        patientId: patId // Keep patientId for quick access
+                                    };
+                                })
+                            }
                             value={
                                 formData.appointmentId
                                     ? {
