@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import axios from '../api/axiosConfig';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
-import { FaMoneyBillWave, FaSearch, FaFilter, FaFileInvoiceDollar, FaCheckCircle, FaRegClock, FaTimesCircle, FaChevronDown, FaEdit, FaTrash, FaPlus, FaChartLine, FaRobot, FaExclamationCircle, FaPrint } from 'react-icons/fa';
+import BillingRulesTab from '../components/BillingRulesTab';
+import NotificationHistoryModal from '../components/NotificationHistoryModal';
+import { FaMoneyBillWave, FaSearch, FaFilter, FaFileInvoiceDollar, FaCheckCircle, FaRegClock, FaTimesCircle, FaChevronDown, FaEdit, FaTrash, FaPlus, FaChartLine, FaRobot, FaExclamationCircle, FaPrint, FaBell } from 'react-icons/fa';
 import Pagination from '../components/Pagination';
 import toast from 'react-hot-toast';
 import Select from 'react-select';
@@ -47,6 +49,12 @@ const FinancialPage = () => {
     // AI Financial Assistant State
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [aiInsights, setAiInsights] = useState(null);
+
+    // Aba ativa: 'invoices' | 'rules'
+    const [activeTab, setActiveTab] = useState('invoices');
+
+    // Modal de Histórico de Notificações
+    const [notifModal, setNotifModal] = useState({ isOpen: false, billing: null, patientName: '' });
 
     // Key Performance Indicators (KPIs)
     const [stats, setStats] = useState({ totalRevenue: 0, pendingAmount: 0, paidCount: 0 });
@@ -490,7 +498,7 @@ const FinancialPage = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
                 <div>
                     <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Gestão Financeira</h2>
-                    <p className="text-sm text-slate-500 mt-1">Acompanhe receitas do período, pagamentos vencidos e receba dicas do Consutor IA.</p>
+                    <p className="text-sm text-slate-500 mt-1">Acompanhe receitas do período, pagamentos vencidos e receba dicas do Consultor IA.</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                     <button 
@@ -506,6 +514,40 @@ const FinancialPage = () => {
                     </button>
                 </div>
             </div>
+
+            {/* ── Navegação por Abas ──────────────────────────────────────── */}
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-fit">
+                <button
+                    id="tab-invoices"
+                    onClick={() => setActiveTab('invoices')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all duration-200 ${
+                        activeTab === 'invoices'
+                            ? 'bg-white text-primary shadow-sm'
+                            : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                >
+                    <FaFileInvoiceDollar /> Faturas
+                </button>
+                <button
+                    id="tab-billing-rules"
+                    onClick={() => setActiveTab('rules')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all duration-200 ${
+                        activeTab === 'rules'
+                            ? 'bg-white text-primary shadow-sm'
+                            : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                >
+                    <FaBell /> Régua de Cobrança
+                </button>
+            </div>
+
+            {/* ── Aba: Régua de Cobrança ────────────────────────────────── */}
+            {activeTab === 'rules' && (
+                <BillingRulesTab />
+            )}
+
+            {/* ── Aba: Faturas (conteúdo original) ────────────────────────── */}
+            {activeTab === 'invoices' && (<>
 
             {/* AI Insights Card */}
             {aiInsights && (
@@ -678,13 +720,14 @@ const FinancialPage = () => {
                                 <th className="p-4 font-bold">Vencimento</th>
                                 <th className="p-4 font-bold">Forma de Pag.</th>
                                 <th className="p-4 font-bold">Status</th>
+                                <th className="p-4 text-center font-bold" title="Notificações">🔔</th>
                                 <th className="p-4 text-center font-bold">Ações</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-sm">
                             {filteredPayments.length === 0 ? (
                                 <tr>
-                                    <td colSpan="7" className="p-8 text-center text-slate-500">
+                                    <td colSpan="8" className="p-8 text-center text-slate-500">
                                         <div className="flex flex-col items-center justify-center">
                                             <FaMoneyBillWave className="text-4xl text-slate-300 mb-3" />
                                             <p className="font-medium">Nenhum registro financeiro encontrado no período e filtro atual.</p>
@@ -724,6 +767,17 @@ const FinancialPage = () => {
                                             <td className="p-4">
                                                 {getStatusBadge(payment.status, payment.dueDate || payment.due_date)}
                                             </td>
+                                            {/* Coluna de Notificações */}
+                                            <td className="p-4 text-center">
+                                                <button
+                                                    id={`btn-notif-${payment.id}`}
+                                                    onClick={() => setNotifModal({ isOpen: true, billing: payment, patientName })}
+                                                    className="p-2 text-slate-300 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                                    title="Ver histórico de cobranças"
+                                                >
+                                                    <FaBell className="text-sm" />
+                                                </button>
+                                            </td>
                                             <td className="p-4">
                                                 <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <button className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors" title="Imprimir Recibo PDF" onClick={() => handlePrintReceipt(payment, patientName)}>
@@ -751,7 +805,18 @@ const FinancialPage = () => {
                 />
             </div>
 
-            {/* Modal Forms Emissão Financeida */}
+            {/* Modal de Histórico de Notificações */}
+            <NotificationHistoryModal
+                isOpen={notifModal.isOpen}
+                onClose={() => setNotifModal({ isOpen: false, billing: null, patientName: '' })}
+                billing={notifModal.billing}
+                patientName={notifModal.patientName}
+            />
+
+            </> /* fim aba invoices */
+            )}
+
+            {/* Modal Forms Emissão Financeira */}
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? "Editar Faturamento" : "Emitir Fatura de Consulta"}>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 mb-4">
