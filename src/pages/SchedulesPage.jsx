@@ -597,7 +597,7 @@ const SchedulesPage = () => {
                             is_return: !!formData.is_return
                         });
                         if (putRes.data && typeof putRes.data === 'object') {
-                            setAppointments(prev => prev.map(a => String(a.id) === String(editingId) ? { ...a, ...putRes.data[1]?.[0], ...putRes.data } : a));
+                            setAppointments(prev => prev.map(a => String(a.id) === String(editingId) ? { ...a, ...putRes.data } : a));
                         }
                     } else {
                         const postRes = await axios.post('/appointments', {
