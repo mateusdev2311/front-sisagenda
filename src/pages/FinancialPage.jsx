@@ -373,7 +373,7 @@ const FinancialPage = () => {
                     fetchDependencies();
                     fetchBilling(searchTerm);
                 } catch (error) {
-                    toast.error('Erro ao excluir registro. Tente novamente.');
+                    toast.error(error.response?.data?.message || error.response?.data?.error || 'Erro ao excluir registro. Tente novamente.');
                 }
             }
         });

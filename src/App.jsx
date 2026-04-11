@@ -18,6 +18,7 @@ import RegisterPage from './pages/RegisterPage';
 import SubscribePage from './pages/SubscribePage';
 import './index.css';
 import './api/axiosConfig';
+import GlobalErrorBoundary from './components/GlobalErrorBoundary';
 
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem('token');
@@ -51,40 +52,42 @@ const RoleBasedRedirect = () => {
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Landing Page (public) */}
-        <Route path="/" element={<LandingPage />} />
+    <GlobalErrorBoundary>
+      <Router>
+        <Routes>
+          {/* Landing Page (public) */}
+          <Route path="/" element={<LandingPage />} />
 
-        {/* Public Auth Routes */}
-        <Route element={<AuthLayout />}>
-          <Route path="/login" element={<LoginPage />} />
-        </Route>
+          {/* Public Auth Routes */}
+          <Route element={<AuthLayout />}>
+            <Route path="/login" element={<LoginPage />} />
+          </Route>
 
-        {/* Public Register + Subscribe (sem AuthLayout, design próprio) */}
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/subscribe" element={<SubscribePage />} />
+          {/* Public Register + Subscribe (sem AuthLayout, design próprio) */}
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/subscribe" element={<SubscribePage />} />
 
-        {/* Protected Dashboard Routes */}
-        <Route element={<PrivateRoute><DashboardLayout /></PrivateRoute>}>
-          <Route path="/" element={<RoleBasedRedirect />} />
-          <Route path="/home" element={<DashboardHome />} />
-          <Route path="/users" element={<UsersPage />} />
-          <Route path="/doctors" element={<DoctorsPage />} />
-          <Route path="/patients" element={<PatientsPage />} />
-          <Route path="/schedules" element={<SchedulesPage />} />
-          <Route path="/atendimentos" element={<AtendimentosPage />} />
-          <Route path="/records" element={<RecordsPage />} />
-          <Route path="/follow-ups" element={<FollowUpsPage />} />
-          <Route path="/financial" element={<FinancialPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/admin/clinicas" element={<SuperAdminRoute><AdminCompaniesPage /></SuperAdminRoute>} />
-        </Route>
+          {/* Protected Dashboard Routes */}
+          <Route element={<PrivateRoute><DashboardLayout /></PrivateRoute>}>
+            <Route path="/" element={<RoleBasedRedirect />} />
+            <Route path="/home" element={<DashboardHome />} />
+            <Route path="/users" element={<UsersPage />} />
+            <Route path="/doctors" element={<DoctorsPage />} />
+            <Route path="/patients" element={<PatientsPage />} />
+            <Route path="/schedules" element={<SchedulesPage />} />
+            <Route path="/atendimentos" element={<AtendimentosPage />} />
+            <Route path="/records" element={<RecordsPage />} />
+            <Route path="/follow-ups" element={<FollowUpsPage />} />
+            <Route path="/financial" element={<FinancialPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/admin/clinicas" element={<SuperAdminRoute><AdminCompaniesPage /></SuperAdminRoute>} />
+          </Route>
 
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Router>
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
+    </GlobalErrorBoundary>
   );
 }
 

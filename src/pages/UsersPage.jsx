@@ -55,7 +55,7 @@ const UsersPage = () => {
             }
         } catch (error) {
             console.error('Failed to fetch users', error);
-            toast.error('Erro ao carregar usuários. Tente recarregar a página.');
+            toast.error(error.response?.data?.message || error.response?.data?.error || 'Erro ao carregar usuários. Tente recarregar a página.');
         }
     };
 
@@ -87,7 +87,7 @@ const UsersPage = () => {
             setIsViewing(true);
             setIsModalOpen(true);
         } catch (error) {
-            toast.error('Não foi possível carregar o perfil do usuário. Tente novamente.');
+            toast.error(error.response?.data?.message || error.response?.data?.error || 'Não foi possível carregar o perfil do usuário. Tente novamente.');
         }
     };
 
@@ -107,7 +107,7 @@ const UsersPage = () => {
                     setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                     fetchUsers();
                 } catch (error) {
-                    toast.error('Erro ao excluir usuário. Tente novamente.');
+                    toast.error(error.response?.data?.message || 'Erro ao excluir usuário. Tente novamente.');
                 }
             }
         });
@@ -151,7 +151,7 @@ const UsersPage = () => {
                     setIsModalOpen(false);
                     fetchUsers();
                 } catch (error) {
-                    toast.error('Erro ao salvar usuário. Verifique os dados e tente novamente.');
+                    toast.error(error.response?.data?.message || error.response?.data?.error || 'Erro ao salvar usuário. Verifique os dados e tente novamente.');
                 }
             }
         });

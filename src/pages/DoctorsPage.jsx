@@ -68,7 +68,7 @@ const DoctorsPage = () => {
             }
         } catch (error) {
             console.error('Fetch doctors error:', error);
-            toast.error('Erro ao carregar lista de médicos.');
+            toast.error(error.response?.data?.message || error.response?.data?.error || 'Erro ao carregar lista de médicos.');
         }
     };
 
@@ -109,7 +109,7 @@ const DoctorsPage = () => {
             setIsViewing(true);
             setIsModalOpen(true);
         } catch (error) {
-            toast.error('Não foi possível carregar o perfil do médico. Tente novamente.');
+            toast.error(error.response?.data?.message || error.response?.data?.error || 'Não foi possível carregar o perfil do médico. Tente novamente.');
         }
     };
 
@@ -232,7 +232,7 @@ const DoctorsPage = () => {
                     setConfirmDialog(prev => ({ ...prev, isOpen: false }));
                     fetchDoctors();
                 } catch (error) {
-                    toast.error('Erro ao excluir médico. Verifique se ele não possui consultas vinculadas.');
+                    toast.error(error.response?.data?.message || error.response?.data?.error || 'Erro ao excluir médico. Verifique se ele não possui consultas vinculadas.');
                 }
             }
         });
@@ -269,7 +269,7 @@ const DoctorsPage = () => {
                     setIsModalOpen(false);
                     fetchDoctors();
                 } catch (error) {
-                    toast.error('Erro ao salvar médico. Verifique os dados e tente novamente.');
+                    toast.error(error.response?.data?.message || error.response?.data?.error || 'Erro ao salvar médico. Verifique os dados e tente novamente.');
                 }
             }
         });

@@ -66,7 +66,7 @@ const PatientsPage = () => {
                 setPatients([]);
             }
         } catch (error) {
-            toast.error('Error fetching patients');
+            toast.error(error.response?.data?.message || error.response?.data?.error || 'Erro ao carregar pacientes.');
         } finally {
             setIsLoading(false);
         }
@@ -109,7 +109,7 @@ const PatientsPage = () => {
             setIsViewing(true);
             setIsModalOpen(true);
         } catch (error) {
-            toast.error('Error loading profile');
+            toast.error(error.response?.data?.message || error.response?.data?.error || 'Erro ao buscar perfil do paciente.');
         }
     };
 
@@ -131,7 +131,7 @@ const PatientsPage = () => {
                     toast.success('Paciente excluído permanentemente.');
                     fetchPatients();
                 } catch (error) {
-                    toast.error('Erro ao excluir paciente');
+                    toast.error(error.response?.data?.message || 'Erro ao excluir paciente. Verifique dependências associadas.');
                 }
             }
         });

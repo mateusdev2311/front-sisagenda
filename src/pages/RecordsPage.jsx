@@ -155,7 +155,7 @@ const RecordsPage = () => {
             setRecords(patientRecords);
         } catch (error) {
             console.error('Fetch global records error:', error);
-            toast.error('Erro ao buscar prontuários no servidor.');
+            toast.error(error.response?.data?.message || error.response?.data?.error || 'Erro ao buscar prontuários no servidor.');
             setRecords([]);
             setPatientAppointments([]);
         } finally {
@@ -199,7 +199,7 @@ const RecordsPage = () => {
                     fetchRecords(selectedPatientId);
                     toast.success('Prontuário excluído com sucesso.');
                 } catch (error) {
-                    toast.error('Erro ao excluir prontuário');
+                    toast.error(error.response?.data?.message || 'Erro ao excluir prontuário');
                 }
             }
         });
@@ -256,7 +256,7 @@ const RecordsPage = () => {
                                 axios.get('/billing').then(billRes => setBillingRecords(billRes.data));
                             } catch (billError) {
                                 console.error('Error integrating billing:', billError);
-                                toast.error('Prontuário salvo, mas erro ao registrar faturamento.');
+                                toast.error(billError.response?.data?.message || 'Prontuário salvo, mas erro ao registrar faturamento.');
                             }
                         }
                     }
@@ -267,7 +267,7 @@ const RecordsPage = () => {
                     toast.success(editingId ? 'Prontuário atualizado!' : 'Prontuário assinado!');
                     fetchRecords(selectedPatientId);
                 } catch (error) {
-                    toast.error('Erro ao salvar prontuário ou histórico clínico');
+                    toast.error(error.response?.data?.message || error.response?.data?.error || 'Erro ao salvar prontuário ou histórico clínico');
                 }
             }
         });

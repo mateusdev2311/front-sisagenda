@@ -236,7 +236,7 @@ const SchedulesPage = () => {
             setActiveConsultations(updated);
             fetchData();
         } catch (err) {
-            toast.error('Erro ao salvar prontuário.');
+            toast.error(err.response?.data?.message || err.response?.data?.error || 'Erro ao salvar prontuário.');
         } finally {
             setIsSavingRecord(false);
         }
@@ -434,7 +434,7 @@ const SchedulesPage = () => {
             if (status === 400) toast.error('Integração Kentro não configurada ou inativa.');
             else if (status === 404) toast.error('Agendamento não encontrado.');
             else if (status === 500) toast.error('Falha na API do Kentro. Tente novamente.');
-            else toast.error('Erro ao reenviar lembrete.');
+            else toast.error(e.response?.data?.message || e.response?.data?.error || 'Erro ao reenviar lembrete.');
         } finally {
             setIsResending(false);
         }

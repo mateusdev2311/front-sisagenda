@@ -11,6 +11,7 @@ import {
     deleteBillingRule,
 } from '../services/billingRulesService';
 import toast from 'react-hot-toast';
+import ConfirmModal from './ConfirmModal';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -296,6 +297,7 @@ const BillingRulesTab = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [modalState, setModalState] = useState({ isOpen: false, rule: null });
     const [isTogglingId, setIsTogglingId] = useState(null);
+    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, rule: null, daysLabel: '' });
 
     useEffect(() => {
         fetchRules();
@@ -337,14 +339,20 @@ const BillingRulesTab = () => {
             ? `${Math.abs(rule.trigger_days)}d antes`
             : rule.trigger_days === 0 ? 'No dia' : `+${rule.trigger_days}d após`;
 
-        if (!window.confirm(`Remover regra "${daysLabel}"? Esta ação não pode ser desfeita.`)) return;
+        setConfirmDialog({ isOpen: true, rule, daysLabel });
+    };
 
+    const execDelete = async () => {
+        const { rule } = confirmDialog;
+        if (!rule) return;
         try {
             await deleteBillingRule(rule.id);
             setRules((prev) => prev.filter((r) => r.id !== rule.id));
+            setConfirmDialog({ isOpen: false, rule: null, daysLabel: '' });
             toast.success('Regra removida com sucesso.');
-        } catch {
-            toast.error('Erro ao remover regra.');
+        } catch (err) {
+            toast.error(err.response?.data?.message || err.response?.data?.error || 'Erro ao remover regra.');
+            setConfirmDialog(prev => ({ ...prev, isOpen: false }));
         }
     };
 
@@ -507,6 +515,17 @@ const BillingRulesTab = () => {
                 rule={modalState.rule}
                 onClose={() => setModalState({ isOpen: false, rule: null })}
                 onSave={handleSave}
+            />
+
+            {/* Confirm Delete */}
+            <ConfirmModal
+                isOpen={confirmDialog.isOpen}
+                onClose={() => setConfirmDialog({ isOpen: false, rule: null, daysLabel: '' })}
+                onConfirm={execDelete}
+                title="Excluir Regra de Cobrança"
+                message={`Deseja realmente remover a regra "${confirmDialog.daysLabel}"? Essa alteração não poderá ser desfeita.`}
+                confirmText="Excluir"
+                type="danger"
             />
         </div>
     );
