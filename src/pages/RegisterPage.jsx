@@ -51,7 +51,7 @@ const PLANS = [
         border: '#a78bfa',
         badge: 'Mais completo',
         features: [
-            'Profissionais ilimitados',
+            'Até 10 profissionais',
             'IA para prontuários',
             'Dashboard avançado',
             'Integração Kentro API',
