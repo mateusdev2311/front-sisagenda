@@ -39,9 +39,15 @@ const PLANS = [
     },
     {
         name: 'Pro', subtitle: 'Solução completa', color: '#6c5be4', borderColor: '#a78bfa', bgAccent: '#f5f3ff',
-        features: ['Profissionais ilimitados', 'Agendamentos ilimitados', 'Prontuário clínico', 'Dashboard avançado e relatórios', 'WhatsApp próprio da clínica', 'Lembretes automáticos', 'IA para prontuários (GPT-4o)', 'Integração Kentro (API Oficial)', 'Suporte via WhatsApp'],
+        features: ['Até 10 profissionais', 'Agendamentos ilimitados', 'Prontuário clínico', 'Dashboard avançado e relatórios', 'WhatsApp próprio da clínica', 'Lembretes automáticos', 'IA para prontuários (GPT-4o)', 'Integração Kentro (API Oficial)', 'Suporte via WhatsApp'],
         locked: [],
         cta: 'Falar sobre o plano Pro', highlight: true,
+    },
+    {
+        name: 'Personalizado', subtitle: 'Para grandes clínicas', color: '#0f172a', borderColor: '#94a3b8', bgAccent: '#f8fafc',
+        features: ['Mais de 10 profissionais', 'Agendamentos ilimitados', 'Prontuário clínico', 'Dashboard avançado e relatórios', 'WhatsApp próprio da clínica', 'Lembretes automáticos', 'IA para prontuários (GPT-4o)', 'Integração Kentro (API Oficial)', 'Atendimento prioritário VIP'],
+        locked: [],
+        cta: 'Solicitar orçamento', highlight: false,
     },
 ];
 
@@ -362,7 +368,7 @@ export default function LandingPage() {
                         <p style={{ fontSize: isMobile ? 14 : 16, color: '#64748b' }}>Fale com nossa equipe e escolha o plano ideal para o tamanho da sua clínica.</p>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: isMobile ? 16 : 20, maxWidth: isMobile ? '100%' : 760, margin: '0 auto' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? 16 : 20, maxWidth: isMobile ? '100%' : 1100, margin: '0 auto' }}>
                         {PLANS.map(plan => (
                             <div key={plan.name}
                                 style={{ borderRadius: 20, overflow: 'hidden', border: plan.highlight ? `2px solid ${plan.color}` : '1.5px solid #e2e8f0', boxShadow: plan.highlight ? '0 16px 48px rgba(108,91,228,.18)' : '0 2px 12px rgba(0,0,0,.05)', background: 'white', position: 'relative' }}

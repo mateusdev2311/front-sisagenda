@@ -39,6 +39,7 @@ const AtendimentosPage = () => {
     const [isRecording, setIsRecording] = useState(false);
     const [isTranscribing, setIsTranscribing] = useState(false);
     const [transcriptionResult, setTranscriptionResult] = useState(null);
+    const [transcribedAppointmentId, setTranscribedAppointmentId] = useState(null); // appointmentId da transcrição pronta
     const [activeRecordingId, setActiveRecordingId] = useState(null); // appointmentId da consulta sendo gravada
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
@@ -116,11 +117,14 @@ const AtendimentosPage = () => {
             // onstop vai disparar de forma assíncrona e preencher o prontuário
         }
         setRecordingConsultation(activeConsultation);
-        setRecordData({ description: '', prescription: '' });
-        // Só limpa a transcrição se não era esta consulta que estava gravando
-        if (activeRecordingId !== activeConsultation.appointmentId) {
+        
+        // Só limpa os dados se não for a consulta que acabamos de transcrever
+        if (transcribedAppointmentId !== activeConsultation.appointmentId && activeRecordingId !== activeConsultation.appointmentId) {
+            setRecordData({ description: '', prescription: '' });
             setTranscriptionResult(null);
+            setTranscribedAppointmentId(null);
         }
+        
         setIsRecordModalOpen(true);
     };
 
@@ -170,13 +174,23 @@ const AtendimentosPage = () => {
                     const patientName = patients.find(p => String(p.id) === String(cons.patientId))?.name || 'Paciente';
                     const res = await transcribeAudio(blob, patientName);
                     const { transcription, medical_record } = res.data;
+                    console.log('[AI] Payload recebido:', res.data); // Log para debug
+
                     setTranscriptionResult(transcription);
+                    
+                    let desc = medical_record?.description || medical_record?.descricao || medical_record?.medical_record?.description || '';
+                    let pres = medical_record?.prescription || medical_record?.prescricao || medical_record?.medical_record?.prescription || '';
+                    if (typeof medical_record === 'string') desc = medical_record;
+
                     setRecordData(prev => ({
-                        description: medical_record?.description || prev.description,
-                        prescription: medical_record?.prescription || prev.prescription,
+                        description: desc || prev.description || '',
+                        prescription: pres || prev.prescription || '',
                     }));
+                    setTranscribedAppointmentId(cons.appointmentId);
+                    
                     toast.success('Prontuário gerado pela IA! Abra o modal para finalizar.', { duration: 4000, icon: '🤖' });
                 } catch (err) {
+                    console.error('[AI] Erro:', err);
                     toast.error(err.response?.data?.error || 'Erro ao transcrever o áudio.');
                 } finally { setIsTranscribing(false); }
             };
@@ -193,6 +207,8 @@ const AtendimentosPage = () => {
             mediaRecorderRef.current.stop();
             setIsRecording(false);
             setActiveRecordingId(null);
+            // Abre o modal automaticamente para visualizar o carregamento da IA
+            setIsRecordModalOpen(true);
         }
     };
 
